@@ -9,7 +9,8 @@ Each time you analyse a stock, the tool runs the frameworks from your design doc
 | Read the market | 3. Trend | Moving-average crossover, MACD, momentum, breakouts, price vs. 10/50/200-day averages, and an uptrend / downtrend / sideways label. |
 | | 4. Reversals | Support and resistance zones; head-and-shoulders, triple and double tops/bottoms, flags, pennants, wedges, rounding tops/bottoms; RSI, Bollinger Bands and adaptive ROC. |
 | | 5. Volume | A signal on a day with heavy volume (at least 1.5× normal) counts fully. Normal volume counts half, and light volume counts zero. |
-| | 6. Sentiment | Squeeze Play I and II, Tsunami and the fast volatility swing. These are contrarian: they buy when options traders are fearful. |
+| | 6. Sentiment | Squeeze Play I and II, Tsunami and the fast volatility swing. These are contrarian: they buy when options traders are fearful. Until enough real volume history exists, they use put/call ratios from open interest (labelled "substitute"). |
+| | [GEX] add-on | Gamma flip, call wall and put wall on the chart. Three GEX rules are back-tested, but GEX has no vote in the rating (it is not from the books). |
 | Decide | 7. Rating | Score = 0.35 × Trend + 0.40 × Reversal + 0.25 × Sentiment. Buy needs a score of at least +0.40, 2 of 3 groups positive and no group below −0.50 (Sell is the mirror image). The rating changes only after 2 days in a row. |
 | | 8. Trade plan | Every signal enters at the next day's open. Pattern trades exit at the price target, the time limit or a stop-loss (2 closes back across the broken line, or a 4% loss), whichever comes first. |
 | Prove it | 9. Back-test | Tests every rule in time order (training, validation and final test), compares it with buy-and-hold after trading costs, and reports hit rates. |

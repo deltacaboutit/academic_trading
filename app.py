@@ -24,7 +24,7 @@ st.set_page_config(page_title="Academic Trading", page_icon="📈", layout="wide
 
 GREEN, RED, GREY, BLUE, AMBER = "#1a7f37", "#cf222e", "#6e7781", "#0969da", "#bf8700"
 RCOL = {"BUY": GREEN, "SELL": RED, "HOLD": GREY}
-GROUP_NAME = {"trend": "Trend", "reversal": "Reversal", "sentiment": "Sentiment"}
+GROUP_NAME = {"trend": "Trend", "reversal": "Reversal", "sentiment": "Sentiment", "gex": "GEX add-on"}
 
 st.markdown("""
 <style>
@@ -191,6 +191,21 @@ with tabs[0]:
             extra += f" Broken line today: {plan['line_today']:,.2f} — close the trade if price closes back across it for {plan['stop_days']} days in a row."
         st.caption(extra + f" Approximate stop price from today's close: {plan['approx_stop_price']:,.2f}.")
 
+    gx = res.get("gex")
+    if gx is not None:
+        k = n - 1
+        while k > 0 and np.isnan(gx["call_wall_price"][k]) and np.isnan(gx["gex_flip"][k]):
+            k -= 1
+        px = float(df["Close"].iloc[-1])
+        def lvl(key):
+            v = gx[key][k]
+            return "–" if np.isnan(v) else f"{v:,.2f} ({v / px - 1:+.1%})"
+        st.subheader("[GEX] Gamma levels — information only")
+        g1, g2, g3 = st.columns(3)
+        g1.metric("Put wall", lvl("put_wall_price")); g2.metric("Gamma flip", lvl("gex_flip")); g3.metric("Call wall", lvl("call_wall_price"))
+        st.caption(f"Levels from {df.index[k]:%d %b %Y}; % is the distance from today's close. GEX is not in either book, so it "
+                   "has no vote in the rating; its signals are tested on the Back-test tab (rules starting with [GEX]).")
+
     st.subheader("Why — signals counting today")
     rows = []
     for sg, contrib, note in res["votes"]:
@@ -229,13 +244,15 @@ with tabs[0]:
 
 # ================================================================ CHART ====
 with tabs[1]:
-    cc = st.columns([2, 1, 1, 1, 1, 1])
+    cc = st.columns([2, 1, 1, 1, 1, 1, 1])
     span = cc[0].radio("Period", ["6 months", "1 year", "2 years", "5 years", "All"], index=1, horizontal=True)
     show_zones = cc[1].checkbox("Zones", True)
     show_pat = cc[2].checkbox("Patterns", True)
     show_ind = cc[3].checkbox("Indicator signals", False)
     show_bb = cc[4].checkbox("Bollinger", False)
     show_tp = cc[5].checkbox("Turning points", False)
+    show_gex = cc[6].checkbox("GEX levels", res.get("gex") is not None, disabled=res.get("gex") is None,
+                              help="Gamma flip, call wall and put wall (add-on, not from the books).")
     days = {"6 months": 126, "1 year": 252, "2 years": 504, "5 years": 1260, "All": n}[span]
     a = max(0, n - days)
     x = df.index[a:]
@@ -258,6 +275,12 @@ with tabs[1]:
                 fig.add_hrect(y0=zlo, y1=zhi, fillcolor=BLUE, opacity=0.10, line_width=0, row=1, col=1)
                 fig.add_annotation(x=x[-1], y=lvl, text=f"zone {lvl:,.2f} ({cnt} pts)", showarrow=False,
                                    xanchor="right", font=dict(size=10, color=BLUE), row=1, col=1)
+    if show_gex and res.get("gex") is not None:
+        gx = res["gex"]
+        for key, name, col, dash in (("call_wall_price", "Call wall", RED, "dash"), ("put_wall_price", "Put wall", GREEN, "dash"),
+                                     ("gex_flip", "Gamma flip", "#8250df", "dot")):
+            fig.add_trace(go.Scatter(x=x, y=gx[key][a:], name=name, mode="lines", line=dict(color=col, width=1.3, dash=dash,
+                                     shape="hv"), connectgaps=False), 1, 1)
     if show_tp:
         from atrade.turning_points import rolling_window
         tp = rolling_window(c, int(S["w_hs"]))
@@ -319,10 +342,10 @@ with tabs[2]:
     st.write("Every signal the rules produced, newest first. Signals are dated on the day they became known; "
              "a trade would start at the next day's open.")
     f1, f2 = st.columns(2)
-    groups = f1.multiselect("Groups", ["Trend", "Reversal", "Sentiment"], default=["Reversal", "Sentiment"])
+    groups = f1.multiselect("Groups", ["Trend", "Reversal", "Sentiment", "GEX add-on"], default=["Reversal", "Sentiment"])
     lookback = f2.slider("Show the last … trading days", 20, min(n, 2520), min(252, n), step=20)
     rows = []
-    for sg in res["signals"]:
+    for sg in res["signals"] + res.get("gex_signals", []):
         if sg.idx < n - lookback or GROUP_NAME.get(sg.group) not in groups:
             continue
         tr = sg.extra.get("trade") or {}
@@ -398,22 +421,10 @@ with tabs[3]:
 with tabs[4]:
     wl_text = st.text_area("Tickers (one per line or separated by commas)", "\n".join(load_watchlist()), height=130)
     tick = [t.strip().upper() for t in wl_text.replace(",", "\n").splitlines() if t.strip()]
-    b1, b2, b3 = st.columns(3)
+    b1, b2 = st.columns(2)
     if b1.button("Save list"):
         save_watchlist(tick); st.success("Saved.")
     rate_all = b2.button("Rate all", type="primary")
-    snap_all = b3.button("Save today's options data for all",
-                         help="Builds each stock's own put/call and implied-volatility history. Run once a day after the close.")
-    if snap_all:
-        prog = st.progress(0.0)
-        for i, t in enumerate(tick):
-            try:
-                row = D.snapshot_options(t)
-                st.write(f"{t}: put/call {row['put_call_ratio']:.2f}, average implied volatility {row['avg_iv']:.1%} "
-                         f"({D.snapshot_count(t)} days saved)")
-            except Exception as e:
-                st.write(f"{t}: {e}")
-            prog.progress((i + 1) / len(tick))
     if rate_all:
         out, results = [], {}
         prog = st.progress(0.0)
@@ -463,26 +474,39 @@ with tabs[4]:
 
 # ========================================================= OPTIONS DATA ====
 with tabs[5]:
-    st.write("Framework 6 reads the mood of options traders and bets against extremes. Free sources do not "
-             "provide a history of put/call ratios, so this tool builds one: save a snapshot every day after the "
-             "close, or import a history file if you have one.")
+    st.write("Framework 6 reads the mood of options traders and bets against extremes. The options history lives in "
+             "the repo's `options_data` folder. It started with your one-time import and grows every trading day at "
+             "4:30 pm New York time through the GitHub Action.")
     stt = pd.DataFrame(res["sentiment_status"])
-    stt["Status"] = stt.apply(lambda r: "Active" if r["active"] else f"Waiting: {r['days']} of {r['needed']} days", axis=1)
-    st.dataframe(stt[["system", "data", "Status"]].rename(columns={"system": "System", "data": "Data needed"}),
+    if "votes" not in stt:
+        stt["votes"] = stt["active"]
+    stt["Status"] = stt.apply(lambda r: ("Active - votes in the rating" if r["votes"] else "Active - back-test only")
+                              if r["active"] else f"Waiting: {r['days']} of {r['needed']} days", axis=1)
+    st.dataframe(stt[["system", "data", "Status"]].rename(columns={"system": "System", "data": "Data used"}),
                  hide_index=True)
+    st.caption("Systems marked *open-interest substitute* use put open interest ÷ call open interest, because the "
+               "history before the daily update has no volume. Summa's rules use volume, so the substitute votes only "
+               "until the real-volume version has enough days, and is back-tested separately.")
     o1, o2 = st.columns(2)
     with o1:
-        st.subheader("Daily snapshot")
-        st.write(f"Snapshots saved for {res['ticker']}: **{D.snapshot_count(res['ticker'])}** days.")
-        if st.button(f"Save today's options data for {res['ticker']}"):
-            try:
-                row = D.snapshot_options(res["ticker"])
-                st.success(f"Saved {row['date']}: put volume {row['put_volume']:,.0f}, call volume {row['call_volume']:,.0f}, "
-                           f"put/call {row['put_call_ratio']:.2f}, average implied volatility {row['avg_iv']:.1%}.")
-            except Exception as e:
-                st.error(str(e))
-        st.caption("Tip: the file collect_options_windows.bat saves snapshots for your whole watch list. "
-                   "The README explains how to make Windows run it every weekday at 5 pm.")
+        st.subheader("Options data store")
+        try:
+            from atrade import options_store as OS
+            stx = OS.status()
+            if stx["summary_days"]:
+                st.write(f"**{stx['summary_days']}** trading days ({stx['summary_first']} to {stx['summary_last']}) for "
+                         f"**{stx['tickers']}** tickers. Real volume collected on **{stx['volume_days']}** days. "
+                         f"Full chain: {len(stx['parts'])} part file(s) plus {stx['pending_files']} recent daily file(s). "
+                         f"Last update: {stx['last_update']}.")
+            else:
+                st.info("No options data yet. Run the one-time import described in the README.")
+        except Exception as e:
+            st.error(f"Could not read options_data: {e}")
+        if st.button("Get the latest data from GitHub", help="Runs 'git pull' in this folder."):
+            import subprocess
+            r = subprocess.run(["git", "pull", "--ff-only"], cwd=Path(__file__).parent, capture_output=True, text=True)
+            (st.success if r.returncode == 0 else st.error)((r.stdout + r.stderr).strip() or "Done.")
+            st.cache_data.clear()
         st.subheader("Equity-only put/call ratio")
         if st.button("Download Cboe's free archive"):
             try:
@@ -508,7 +532,9 @@ with tabs[5]:
     ex = {k: v for k, v in res["extremes"].items() if v}
     if ex:
         st.subheader("How extreme is the mood right now? (10/250 oscillator vs. its record so far)")
-        names = {"vix": "VIX", "equity_pc": "Equity put/call", "stock_pc": "Stock put/call", "stock_iv": "Stock implied volatility"}
+        names = {"vix": "VIX", "equity_pc": "Equity / market put/call (volume)", "equity_pc_oi": "Market put/call (open interest)",
+                 "stock_pc": "Stock put/call (volume)", "stock_pc_oi": "Stock put/call (open interest)",
+                 "stock_iv": "Stock implied volatility"}
         st.dataframe(pd.DataFrame([{"Series": names.get(k, k), "Oscillator": round(v["value"], 1),
                                     "Record high": round(v["record_high"], 1), "Record low": round(v["record_low"], 1),
                                     "Reading": "Extreme fear (buy setup)" if v["near_high"] else

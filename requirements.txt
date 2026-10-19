@@ -1,6 +1,7 @@
 pandas>=2.1
 numpy>=1.26
 scipy>=1.11
+pyarrow>=15
 yfinance>=0.2.54
 streamlit>=1.50
 plotly>=5.20

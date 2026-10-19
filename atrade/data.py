@@ -185,8 +185,34 @@ def _read_import(key: str) -> pd.Series | None:
     return pd.read_csv(path, index_col=0, parse_dates=True).iloc[:, 0]
 
 
+def _store_summary(ticker: str):
+    try:
+        from . import options_store as OS
+        s = OS.read_summary([ticker])
+        return s.set_index("date") if len(s) else None
+    except Exception:
+        return None
+
+
+def _market_pc():
+    try:
+        from . import options_store as OS
+        m = OS.market_put_call()
+        return m if len(m) else None
+    except Exception:
+        return None
+
+
 def load_sentiment(ticker: str, dates: pd.DatetimeIndex, years: int) -> dict:
-    """All sentiment series aligned to the price dates (NaN where missing)."""
+    """All sentiment series aligned to the price dates (NaN where missing).
+
+    stock_pc      the stock's put/call ratio from VOLUME (daily store, snapshots, imports)
+    stock_pc_oi   the stock's put/call ratio from OPEN INTEREST (labelled substitute)
+    stock_iv      the stock's average implied volatility
+    equity_pc     equity-only put/call (Cboe import, else market-wide volume ratio)
+    equity_pc_oi  market-wide put/call from open interest (labelled substitute)
+    vix           CBOE Volatility Index
+    """
     ticker = ticker.upper()
     out: dict[str, np.ndarray] = {}
     if ticker == "DEMO":
@@ -194,18 +220,50 @@ def load_sentiment(ticker: str, dates: pd.DatetimeIndex, years: int) -> dict:
         return demo_sentiment(dates)
 
     def align(sr):
-        return sr.reindex(dates).to_numpy(float) if sr is not None and len(sr) else None
+        if sr is None:
+            return None
+        sr = sr.dropna()
+        if not len(sr):
+            return None
+        sr.index = pd.DatetimeIndex(sr.index).normalize()
+        sr = sr[~sr.index.duplicated(keep="last")]
+        return sr.reindex(dates).to_numpy(float)
 
-    vix = load_vix(years)
-    out["vix"] = align(vix)
-    out["equity_pc"] = align(_read_import("equity_pc"))
+    def combine(*parts):
+        sr = None
+        for p in parts:
+            if p is None or not len(p.dropna()):
+                continue
+            p = p.dropna(); p.index = pd.DatetimeIndex(p.index).normalize()
+            sr = p if sr is None else sr.combine_first(p)
+        return sr
+
+    out["vix"] = align(load_vix(years))
+    store = _store_summary(ticker)
+    mkt = _market_pc()
+
+    # market-wide / equity-only put/call
+    out["equity_pc"] = align(combine(mkt["pc_volume"] if mkt is not None else None, _read_import("equity_pc")))
+    out["equity_pc_oi"] = align(mkt["pc_oi"] if mkt is not None else None)
+
+    # the stock's own ratios: store first, then local snapshots and imports
     snap_path = SENTIMENT_DIR / f"{ticker}_options.csv"
     snap = pd.read_csv(snap_path, parse_dates=["date"]).set_index("date") if snap_path.exists() else None
-    for key, col in (("stock_pc", "put_call_ratio"), ("stock_iv", "avg_iv")):
-        imp = _read_import(f"{ticker}_{key.split('_')[1]}")
-        sr = imp
-        if snap is not None and col in snap:
-            s2 = snap[col].dropna()
-            sr = s2 if sr is None else pd.concat([sr[~sr.index.isin(s2.index)], s2]).sort_index()
-        out[key] = align(sr)
+    out["stock_pc"] = align(combine(store["pc_volume"] if store is not None else None,
+                                    snap["put_call_ratio"] if snap is not None else None,
+                                    _read_import(f"{ticker}_pc")))
+    out["stock_pc_oi"] = align(store["pc_oi"] if store is not None else None)
+    out["stock_iv"] = align(combine(store["avg_iv"] if store is not None else None,
+                                    snap["avg_iv"] if snap is not None else None,
+                                    _read_import(f"{ticker}_iv")))
     return {k: v for k, v in out.items() if v is not None}
+
+
+def load_gex(ticker: str, dates: pd.DatetimeIndex) -> dict | None:
+    """[GEX] flip and walls aligned to the price dates, or None if not available."""
+    s = _store_summary(ticker.upper())
+    if s is None or s["gex_flip"].notna().sum() + s["call_wall_price"].notna().sum() == 0:
+        return None
+    s = s[~s.index.duplicated(keep="last")]
+    cols = ["gex_flip", "call_wall_price", "call_wall_gex", "put_wall_price", "put_wall_gex"]
+    return {c: s[c].astype(float).reindex(dates).to_numpy(float) for c in cols}

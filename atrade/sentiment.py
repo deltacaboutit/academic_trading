@@ -180,32 +180,57 @@ def sentiment_signals(series: dict, df, s: dict):
         cnt = 0 if arr is None else int((~np.isnan(arr)).sum())
         return arr is not None and cnt >= need, cnt
 
-    # Squeeze Play I on the equity-only put/call ratio
-    ok, cnt = have("equity_pc", 60)
-    if ok:
+    SUB = " - open-interest substitute"
+
+    def mute(new_sigs):
+        """Substitute signals are back-tested but do not vote once the real series is active."""
+        for g in new_sigs:
+            g.kind = "benchmark"
+        return new_sigs
+
+    # Squeeze Play I on the equity-only put/call ratio (Cboe import or the
+    # tool's own market-wide ratio from all S&P 500 stocks). Open-interest
+    # version is a labelled substitute until enough volume days exist.
+    real_ok, cnt = have("equity_pc", 60)
+    if real_ok:
         pc = series["equity_pc"]
         sigs += squeeze_play_1(oscillator(pc, 5, 21), oscillator(pc, 21, 50), h, l, c, "Squeeze Play I (equity P/C)", s)
-    status.append({"system": "Squeeze Play I", "data": "Equity-only put/call ratio", "days": cnt, "needed": 60, "active": ok})
+    status.append({"system": "Squeeze Play I", "data": "Equity-only put/call ratio (volume)", "days": cnt, "needed": 60, "active": real_ok, "votes": real_ok})
+    ok, cnt = have("equity_pc_oi", 60)
+    if ok:
+        pc = series["equity_pc_oi"]
+        x = squeeze_play_1(oscillator(pc, 5, 21), oscillator(pc, 21, 50), h, l, c, "Squeeze Play I (market P/C" + SUB + ")", s)
+        sigs += mute(x) if real_ok else x
+    status.append({"system": "Squeeze Play I" + SUB, "data": "Market-wide put/call ratio from open interest",
+                   "days": cnt, "needed": 60, "active": ok, "votes": ok and not real_ok})
 
     # Stock's own put/call ratio: Squeeze Play II (A and B) and Tsunami
-    ok, cnt = have("stock_pc", 110)
-    if ok:
-        pc = series["stock_pc"]
-        o50 = oscillator(pc, 50, 100)
-        sigs += squeeze_play_2a(o50, o, h, l, c, "Squeeze Play II-A (stock P/C)", s)
-        sigs += squeeze_play_2b(o50, h, l, c, 3, int(s["sp2b_hold"]), "Squeeze Play II-B (stock P/C)", "the stock's put/call ratio", s)
-    status.append({"system": "Squeeze Play II-A and II-B", "data": "Stock's own put/call ratio", "days": cnt, "needed": 110, "active": ok})
-    ok2, cnt2 = have("stock_pc", 60)
-    if ok2:
-        sigs += tsunami(oscillator(series["stock_pc"], 21, 50), n, int(s["tsunami_hold"]), s, "Tsunami (stock P/C)")
-    status.append({"system": "Tsunami Sentiment Wave", "data": "Stock's own put/call ratio", "days": cnt2, "needed": 60, "active": ok2})
+    for key, suffix, label in (("stock_pc", "", "Stock's own put/call ratio (volume)"),
+                               ("stock_pc_oi", SUB, "Stock's own put/call ratio from open interest")):
+        real = key == "stock_pc"
+        ok, cnt = have(key, 110)
+        if ok:
+            pc = series[key]
+            o50 = oscillator(pc, 50, 100)
+            x = squeeze_play_2a(o50, o, h, l, c, "Squeeze Play II-A (stock P/C" + suffix + ")", s)
+            x += squeeze_play_2b(o50, h, l, c, 3, int(s["sp2b_hold"]), "Squeeze Play II-B (stock P/C" + suffix + ")",
+                                 "the stock's put/call ratio" + suffix, s)
+            sigs += x if (real or not have("stock_pc", 110)[0]) else mute(x)
+        status.append({"system": "Squeeze Play II-A and II-B" + suffix, "data": label, "days": cnt, "needed": 110,
+                       "active": ok, "votes": ok and (real or not have("stock_pc", 110)[0])})
+        ok2, cnt2 = have(key, 60)
+        if ok2:
+            x = tsunami(oscillator(series[key], 21, 50), n, int(s["tsunami_hold"]), s, "Tsunami (stock P/C" + suffix + ")")
+            sigs += x if (real or not have("stock_pc", 60)[0]) else mute(x)
+        status.append({"system": "Tsunami Sentiment Wave" + suffix, "data": label, "days": cnt2, "needed": 60,
+                       "active": ok2, "votes": ok2 and (real or not have("stock_pc", 60)[0])})
 
     # Stock's own implied volatility: Squeeze Play II-B, 21/50, 1-day trigger
     ok, cnt = have("stock_iv", 60)
     if ok:
         sigs += squeeze_play_2b(oscillator(series["stock_iv"], 21, 50), h, l, c, 1, int(s["sp2b_hold"]),
                                 "Squeeze Play II-B (stock IV)", "the stock's implied volatility", s)
-    status.append({"system": "Squeeze Play II-B on implied volatility", "data": "Stock's own implied volatility", "days": cnt, "needed": 60, "active": ok})
+    status.append({"system": "Squeeze Play II-B on implied volatility", "data": "Stock's own implied volatility", "days": cnt, "needed": 60, "active": ok, "votes": ok})
 
     # VIX: Squeeze Play II-B and the fast volatility swing
     f, sl = s["vix_osc"]
@@ -215,6 +240,6 @@ def sentiment_signals(series: dict, df, s: dict):
         sigs += squeeze_play_2b(oscillator(vx, int(f), int(sl)), h, l, c, int(s["vix_trigger_days"]), int(s["sp2b_hold"]),
                                 f"Squeeze Play II-B (VIX {f}/{sl})", "the VIX", s)
         sigs += fast_vol_swing(oscillator(vx, 1, 10), n, s, "Fast volatility swing (VIX)")
-    status.append({"system": "Squeeze Play II-B + fast volatility swing", "data": "VIX", "days": cnt, "needed": int(sl) + 10, "active": ok})
+    status.append({"system": "Squeeze Play II-B + fast volatility swing", "data": "VIX", "days": cnt, "needed": int(sl) + 10, "active": ok, "votes": ok})
 
     return sigs, status

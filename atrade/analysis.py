@@ -9,6 +9,7 @@ import pandas as pd
 from . import data as D
 from .cleaning import clean
 from .gauges import gauge_signals, gauge_values
+from .gex import gex_signals
 from .patterns import all_patterns
 from .rating import RATING_NAME, live_votes, rating_signals, run_rating
 from .sentiment import extreme_info, sentiment_signals
@@ -77,9 +78,20 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
 
     all_sigs = sig_trend + sig_gauge + sig_zone + sig_pat + sig_sent
 
+    step("[GEX] add-on: gamma levels (back-test only, no rating vote)")
+    gex_lv = None
+    sig_gex: list = []
+    try:
+        if ticker.upper() != "DEMO":
+            gex_lv = D.load_gex(ticker, df.index)
+        if gex_lv is not None:
+            sig_gex = gex_signals(df, gex_lv)
+    except Exception:
+        gex_lv = None
+
     step("Framework 9: back-testing every rule")
     by_rule = defaultdict(list)
-    for sg in all_sigs + sig_alex:
+    for sg in all_sigs + sig_alex + sig_gex:
         by_rule[sg.rule].append(sg)
     res = evaluate_rules(by_rule, df, s)
     passes = pass_table(res, s)
@@ -125,5 +137,5 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         "sentiment_series": series, "sentiment_status": sent_status, "extremes": extremes,
         "rating": rating_df, "rating_now": RATING_NAME[cur], "votes": votes, "plan": plan,
         "results": res, "passes": passes, "pattern_outcomes": pattern_outcomes(sig_pat, n, s),
-        "allowed": allowed,
+        "allowed": allowed, "gex": gex_lv, "gex_signals": sig_gex,
     }
