@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- academic_trading ----
+# Local working data (prices cache, settings, snapshots) stays on your computer.
+data/
+# The shared options history IS committed (updated daily by GitHub Actions).
+!options_data/
