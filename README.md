@@ -113,6 +113,23 @@ Three GEX rules are **back-tested only and have no vote in the rating**, as your
 
 The rules use **yesterday's** levels, because today's levels are only known after today's close.
 
+## 3b. Price history for testing (`price_data/`)
+
+Double-click **`download_prices_windows.bat`**. It downloads 25 years of daily prices from Yahoo Finance for every
+ticker in `options_data/universe.txt` (the S&P 500 stocks plus SPY, QQQ and IWM) and for the VIX. It takes
+about 10–20 minutes. Tickers that fail are retried once automatically. At the end, it asks whether to upload the
+`price_data` folder to GitHub.
+
+| File | Contents |
+| --- | --- |
+| `price_data/<TICKER>.parquet` | One row per trading day. Open, High, Low and Close are adjusted for splits and dividends (what the tool analyses). Volume, `Close_raw` (the real closing price, which the option strikes refer to), Dividends and Splits. |
+| `price_data/manifest.csv` | One line per ticker: first and last day, number of days, quick data checks, and any download error. |
+
+The data serves as real test data, so the rules can be checked on real prices instead of simulated ones. The tool
+also falls back to it if Yahoo can't be reached. **Refresh it rarely:** every full re-download rewrites all files,
+and git keeps the old copies (about 100 MB each time). To fetch only tickers that are missing, run
+`python -m atrade.download_prices --missing-only`.
+
 ## 4. What version 1 includes
 
 | Framework | Included now |
