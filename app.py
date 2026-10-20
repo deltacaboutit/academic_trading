@@ -474,9 +474,9 @@ with tabs[4]:
 
 # ========================================================= OPTIONS DATA ====
 with tabs[5]:
-    st.write("Framework 6 reads the mood of options traders and bets against extremes. The options history lives in "
-             "the repo's `options_data` folder. It started with your one-time import and grows every trading day at "
-             "4:30 pm New York time through the GitHub Action.")
+    st.write("Framework 6 reads the mood of options traders and bets against extremes. The daily options summary "
+             "lives in the repo's `options_data` folder and grows every trading "
+             "evening: a GitHub Action copies the new day from your Watchtower repo.")
     stt = pd.DataFrame(res["sentiment_status"])
     if "votes" not in stt:
         stt["votes"] = stt["active"]
@@ -495,9 +495,10 @@ with tabs[5]:
             stx = OS.status()
             if stx["summary_days"]:
                 st.write(f"**{stx['summary_days']}** trading days ({stx['summary_first']} to {stx['summary_last']}) for "
-                         f"**{stx['tickers']}** tickers. Real volume collected on **{stx['volume_days']}** days. "
-                         f"Full chain: {len(stx['parts'])} part file(s) plus {stx['pending_files']} recent daily file(s). "
-                         f"Last update: {stx['last_update']}.")
+                         f"**{stx['tickers']}** tickers. Real volume on **{stx['volume_days']}** days. "
+                         f"Last sync from Watchtower: {stx['last_sync'] or 'not yet'}.")
+                st.caption(f"Full contract-level chains: one file per stock, kept on the "
+                           f"[options-data Release]({stx['release']}). The tool downloads a stock's file when needed.")
             else:
                 st.info("No options data yet. Run the one-time import described in the README.")
         except Exception as e:

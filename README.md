@@ -45,67 +45,60 @@ A program that runs on your own Windows computer and opens in your web browser. 
 
 ## 3. Options data (Framework 6) and GEX
 
-### Where it lives
+### Where the data comes from
 
-Everything is in the `options_data` folder of this repo:
+Your **Watchtower** repo collects the Yahoo Finance option chain of every S&P 500 stock (plus SPY, QQQ and IWM)
+each evening. The **Options data sync** GitHub Action in this repo copies each new Watchtower day across.
+It runs at 11:15 pm and 7:15 am New York time and only processes days it hasn't seen.
 
-| Path | What it holds |
-| --- | --- |
-| `summary/2026-10.parquet`, … | **Daily summary**: one row per stock per day, with one file per month. It holds spot price, put and call open interest, put/call ratio from open interest, put and call volume, put/call ratio from volume, average implied volatility, GEX flip, call wall and put wall. |
-| `chain/part_001.parquet`, … | **Full contract-level chain** (every strike and expiry): date, ticker, spot, expiry_str, strike, is_call, iv, oi, T, volume, source. Each part is under 95 MB. |
-| `chain/pending/2026-10-20.parquet`, … | The most recent days, one small file each, not yet merged into a part. |
-| `universe.txt` | The tickers the daily update collects. |
-| `manifest.json`, `update_log.csv`, `gex_calibration.csv` | What each part contains, a log of each daily run, and the GEX comparison from the import. |
+### Where it is stored
 
-The tool joins every part and pending file back into the full chain (`atrade.options_store.read_chain()`).
+| What | Where | Contents |
+| --- | --- | --- |
+| **Full chain, one file per stock** | `SPY.parquet`, `AAPL.parquet`, … on the GitHub Release **[options-data](https://github.com/deltacaboutit/academic_trading/releases/tag/options-data)**, grouped into 27 zip bundles by first letter (`chains_A.zip` …) because GitHub allows a workflow only 1,000 requests an hour. | Every contract on every day, appended: date, ticker, spot, expiry_str, strike, is_call, iv, iv_filled, oi, volume, T, bid, ask, last_price, source. |
+| **Daily summary** | `options_data/summary/2026-10.parquet`, … (in git, one small file per month) | One row per stock per day: spot, put and call open interest and volume, put/call ratios from both, average IV, Watchtower's 30-day IV, total GEX, gamma flip, call wall and put wall. |
+| Sync bookkeeping | `options_data/watchtower_state.json`, `universe.txt` | Which Watchtower days are done and how each was dated. |
 
-**Why the daily files?** Git keeps every version of every file. If one large part were rewritten each day, the repo
-would grow by that part's full size every day and reach GitHub's limits within months. Instead, each day is written
-once to its own small file. When the daily files add up to about 95 MB, they are merged into the next numbered part,
-which is never changed again.
+**Why a Release and not the repo itself?** Git keeps a full copy of every version of every file. One file per stock
+rewritten every evening would add the whole data set to the repo again each day, and it would hit GitHub's limits within
+weeks. A Release asset is simply replaced, so storage stays at the real data size (about 5 MB of new data per day).
+In Python, `atrade.options_store.read_chain("AAPL")` returns a stock's full chain and downloads the file if needed.
 
-### One-time import of your existing history
+### Fixes applied on the way in
 
-1. Make a folder called `import` inside `academic_trading`. It is not uploaded to GitHub. Copy
-   `chain_history.parquet`, `oi_history.parquet` and `gex_history.csv` into it.
-2. Double-click **`import_options_windows.bat`**. The import does five things:
-   - Writes the chain into parts.
-   - Adds the open-interest-only history for the dates before the chain starts.
-   - Builds the daily summary and puts your GEX levels into it.
-   - Writes `universe.txt`.
-   - **Calibrates the tool's GEX formula against your `gex_history.csv`**, so that new daily values continue your series. It prints how closely the walls and flip match.
-3. Upload the result: in GitHub Desktop, commit `options_data` and press *Push*. Or in a Command Prompt:
-   ```
-   git add options_data
-   git commit -m "Import options history"
-   git push
-   ```
+1. **Real trading day.** Watchtower names each file after the UTC date when its run *started*. So a run that starts
+   after 8 pm New York time, or a weekend re-run, carries the next day's date. The sync dates each run by the New York
+   date of its latest option trade instead. For example, Watchtower's file `2026-10-20` holds the Oct 19 session.
+2. **Broken runs.** A run with less than half the usual number of contracts (for example Watchtower's `2026-08-28`, which
+   has about 7,700 contracts instead of about 140,000) is skipped and logged. That day stays missing until you import it.
+   If two runs belong to the same day, the more complete one is kept.
+3. **Junk implied volatility.** Yahoo's 0.00001 floor and its 5.0 cap are replaced by straight-line interpolation between
+   the nearest good strikes of the same expiry and type (call or put). Beyond the first or last good strike, the nearest
+   good value is used. These rows have `iv_filled = True`.
 
-### The daily update (GitHub Actions)
+### Adding missing days and older history
 
-`.github/workflows/daily_options.yml` runs every weekday at **4:30 pm New York time**. GitHub's clock ignores
-daylight saving, so two times are scheduled; the script checks the New York clock and the NYSE holiday calendar,
-so only one run a day does any work. Each run does four things:
+`python -m atrade.import_history` **only fills days a stock doesn't already have**. It accepts:
 
-- Downloads every expiry for every ticker in `universe.txt` from Yahoo Finance: strike, call/put, implied volatility, open interest and **the day's real volume**.
-- Saves the day as a new file in `chain/pending/` and adds the day's rows to the summary, with put/call ratios from both volume and open interest, average implied volatility and GEX levels.
-- Merges the pending files into a new part once they add up to about 95 MB.
-- Commits and pushes the new data.
+- `--watchtower-folder FOLDER`: missing days in Watchtower's own layout (`chains/ticker=XXX/date=….parquet`, and
+  optionally `features/date=….parquet`).
+- `--chain chain_history.parquet`, `--oi oi_history.parquet` and `--gex gex_history.csv`: your flat history files. The
+  open-interest-only and GEX files reach back before Watchtower started (May and April).
 
-It does nothing until the one-time import has created `universe.txt`. You can also start it by hand: go to the repo's
-**Actions** tab → *Daily options update* → *Run workflow*.
+**The easy way, all in the browser:**
+1. On the repo's **Releases** page, open **Import inbox**, click the pencil (Edit), attach your files, and click *Update release*.
+   Accepted files: `chain_history*.parquet`, `oi_history*.parquet`, `gex_history*.csv`, and `.zip` files of missing
+   days in Watchtower's layout. Each file can be up to 2 GB.
+2. On the **Actions** tab, choose **Options history import**, then *Run workflow*. When it finishes, the inbox is emptied.
 
-Things to know:
-
-- **Open interest** on Yahoo is the figure the OCC publishes overnight, so it reflects the **previous** trading day's close. Volume and spot are the current day's.
-- Yahoo sometimes refuses requests from cloud servers. The script retries each ticker. The run fails (shown in red on the Actions tab) only if more than half of the tickers fail; `options_data/update_log.csv` records each run.
-- If the push is ever refused, open the repo's *Settings → Actions → General* and set *Workflow permissions* to **Read and write**.
+The inbox appears after the first nightly sync run. On your own computer, the same import is
+`python -m atrade.import_history --inbox FOLDER`.
 
 ### How the sentiment systems use the data
 
-- Your history has **open interest but no volume**. Until enough days of real volume exist, the stock-level systems use **put open interest ÷ call open interest**. The same applies to Squeeze Play I, which uses a market-wide ratio built from all the S&P 500 stocks. These versions are labelled **"open-interest substitute"**.
+- Watchtower's chains include **real volume from June 2, 2026**. Days before that (your older files) have **open interest only**. Where there isn't yet enough real-volume history, the stock-level systems use **put open interest ÷ call open interest** instead. The same applies to Squeeze Play I, which uses a market-wide ratio built from all the S&P 500 stocks. These versions are labelled **"open-interest substitute"**.
 - Once the real-volume version has enough history (60 days for Tsunami and Squeeze Play I, 110 for Squeeze Play II), it takes over the vote. The substitute keeps being back-tested alongside it, so you can compare the two.
-- The stock's average implied volatility comes from the chain. Junk values (IV below 1% or above 500%) are left out.
+- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix. GEX levels come from Watchtower's own gamma engine, or from `gex_history.csv` for older days.
 
 ### GEX (gamma exposure) — an add-on, not from the books
 
@@ -161,10 +154,10 @@ app.py                     the browser app
 atrade/                    the analysis engine, one file per framework
   cleaning.py (F1)  turning_points.py (F2)  trend.py (F3)  zones.py, patterns.py, gauges.py (F4)
   volume.py (F5)    sentiment.py (F6)        rating.py (F7) trades.py (F8)  validation.py (F9)
-  gex.py ([GEX] add-on)  options_store.py  import_history.py  update_options.py
+  gex.py ([GEX] add-on)  options_store.py  watchtower.py (nightly sync)  release.py  import_history.py
   data.py  config.py  analysis.py  demo.py  collect.py
-options_data/              options history: daily summary + full chain parts (see section 3)
-.github/workflows/         the 4:30 pm daily update
+options_data/              daily options summary + sync bookkeeping (full chains are on the Release; see section 3)
+.github/workflows/         options_sync.yml: the nightly copy from Watchtower
 tests/                     formula, look-ahead, data-store and GEX checks
 data/                      created on first run: saved prices and settings (not uploaded)
 ```

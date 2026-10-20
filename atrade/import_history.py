@@ -1,36 +1,39 @@
-"""One-time import of the existing history into options_data/.
+"""Import extra options history into the per-stock files and the daily summary.
 
     python -m atrade.import_history --chain chain_history.parquet --oi oi_history.parquet --gex gex_history.csv
+    python -m atrade.import_history --watchtower-folder missing_days/
 
-What it does
-  1. chain_history.parquet  -> full chain parts (source "chain_history")
-  2. oi_history.parquet     -> added to the chain for the dates BEFORE the chain
-                               starts (source "oi_history"; no spot, IV or expiry)
-  3. gex_history.csv        -> GEX flip and walls in the daily summary
-  4. Builds the daily summary (put/call ratios from open interest, average IV,
-     spot, GEX) and universe.txt (the tickers the daily update will collect).
-  5. Calibrates this tool's GEX formula against gex_history.csv, so new daily
-     values continue the old series, and prints a comparison report.
+Every input only FILLS days a stock does not have yet; days already taken
+from Watchtower are left alone (except GEX, which fills summary gaps).
+
+  --chain   flat file: date, ticker, spot, expiry_str, strike, is_call, iv, oi, T (+ volume)
+  --oi      flat file: date, ticker, strike, is_call, oi (no expiry) - only for days
+            with no chain at all; gives the open-interest put/call ratio
+  --gex     gex_history.csv: Date, Ticker, Spot, Flip, Call_Wall_Price, ... -> summary GEX
+  --watchtower-folder   a folder laid out like Watchtower: chains/ticker=XXX/date=YYYY-MM-DD.parquet
+            (+ features/date=YYYY-MM-DD.parquet); dates are mapped to the real trading day
+            the same way as the nightly sync
+
+Afterwards, upload the changed stock files:  python -m atrade.release upload
+and commit options_data/ (summary).
 """
 from __future__ import annotations
 
 import argparse
-import datetime as dt
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from . import gex as G
 from . import options_store as OS
 
 
 def read_gex_csv(path) -> pd.DataFrame:
     g = pd.read_csv(path)
     g.columns = [c.strip() for c in g.columns]
-    ren = {"Date": "date", "Ticker": "ticker", "Spot": "spot", "Flip": "gex_flip",
-           "Call_Wall_Price": "call_wall_price", "Call_Wall_GEX": "call_wall_gex",
-           "Put_Wall_Price": "put_wall_price", "Put_Wall_GEX": "put_wall_gex"}
-    g = g.rename(columns=ren)
+    g = g.rename(columns={"Date": "date", "Ticker": "ticker", "Spot": "spot", "Flip": "gex_flip",
+                          "Call_Wall_Price": "call_wall_price", "Call_Wall_GEX": "call_wall_gex",
+                          "Put_Wall_Price": "put_wall_price", "Put_Wall_GEX": "put_wall_gex"})
     g["date"] = pd.to_datetime(g["date"]).dt.date
     g["ticker"] = g["ticker"].astype(str).str.upper()
     g = g.drop_duplicates(["date", "ticker"], keep="last")
@@ -39,123 +42,128 @@ def read_gex_csv(path) -> pd.DataFrame:
               "put_wall_price", "put_wall_gex", "gex_source"]]
 
 
-def calibrate(chain: pd.DataFrame, gx: pd.DataFrame, n_days: int = 5, max_tickers: int = 40) -> dict:
-    """Recompute GEX from the chain with scale 1 on a sample of overlapping
-    (date, ticker) pairs and compare with gex_history.csv."""
-    both = chain[["date", "ticker"]].drop_duplicates().merge(gx[["date", "ticker"]], on=["date", "ticker"])
-    if both.empty:
-        return {"pairs": 0}
-    days = sorted(both["date"].unique())[-n_days:]
-    sample = both[both["date"].isin(days)]
-    tick = list(dict.fromkeys(["SPY"] + sorted(sample["ticker"].unique())))[:max_tickers]
-    sample = sample[sample["ticker"].isin(tick)]
-    rows = []
-    for d, t in sample.itertuples(index=False):
-        c = chain[(chain["date"] == d) & (chain["ticker"] == t)]
-        spot = float(c["spot"].iloc[0])
-        mine = G.levels(c, spot, scale=1.0)
-        theirs = gx[(gx["date"] == d) & (gx["ticker"] == t)].iloc[0]
-        rows.append({"date": d, "ticker": t, "spot": spot,
-                     "cw_mine": mine["call_wall_price"], "cw_theirs": theirs["call_wall_price"],
-                     "pw_mine": mine["put_wall_price"], "pw_theirs": theirs["put_wall_price"],
-                     "flip_mine": mine["gex_flip"], "flip_theirs": theirs["gex_flip"],
-                     "ratio_cw": theirs["call_wall_gex"] / mine["call_wall_gex"] if mine["call_wall_gex"] else np.nan,
-                     "ratio_pw": theirs["put_wall_gex"] / mine["put_wall_gex"] if mine["put_wall_gex"] else np.nan})
-    r = pd.DataFrame(rows)
-    ratios = pd.concat([r["ratio_cw"], r["ratio_pw"]]).replace([np.inf, -np.inf], np.nan).dropna()
-    ratios = ratios[ratios > 0]
-    return {
-        "pairs": len(r),
-        "scale": float(np.median(ratios)) if len(ratios) else 1.0,
-        "scale_spread": float(ratios.quantile(0.75) / ratios.quantile(0.25)) if len(ratios) > 3 else np.nan,
-        "call_wall_match": float((np.isclose(r["cw_mine"], r["cw_theirs"])).mean()),
-        "put_wall_match": float((np.isclose(r["pw_mine"], r["pw_theirs"])).mean()),
-        "flip_median_gap_pct": float(((r["flip_mine"] - r["flip_theirs"]).abs() / r["spot"]).median()),
-        "detail": r,
-    }
+def _fill_chain(ch: pd.DataFrame, source: str, store, chain_dir, log) -> pd.DataFrame:
+    ch = OS.clean_iv(OS.normalize_chain(ch.assign(source=source), source))
+    for t, g in ch.groupby("ticker"):
+        OS.append_stock(t, g, chain_dir=chain_dir, keep="old")
+    log(f"  {source}: {ch['ticker'].nunique()} stocks, {ch['date'].nunique()} days offered")
+    return ch
 
 
-def main(chain_path, oi_path, gex_path, store=None):
-    t0 = dt.datetime.now()
-    P = OS.paths(store)
-    if list(P["chain"].glob("part_*.parquet")):
-        raise SystemExit(f"{P['chain']} already has history parts. Delete options_data/ first to re-import.")
-    print("Reading chain_history ...")
-    chain = OS.normalize_chain(pd.read_parquet(chain_path), "chain_history")
-    first_chain = chain["date"].min()
-    print(f"  {len(chain):,} rows, {chain['ticker'].nunique()} tickers, {first_chain} to {chain['date'].max()}")
+def import_watchtower_folder(folder: Path, store=None, chain_dir=None, log=print):
+    from .watchtower import read_label
+    folder = Path(folder)
+    root = folder if (folder / "data").exists() else None
+    if root is None:                      # accept chains/ + features/ directly under the folder
+        root = folder.parent / (folder.name + "_wt")
+        (root / "data").mkdir(parents=True, exist_ok=True)
+        for sub in ("chains", "features"):
+            src, dst = folder / sub, root / "data" / sub
+            if src.exists() and not dst.exists():
+                dst.symlink_to(src.resolve(), target_is_directory=True)
+    labels = sorted({p.name[5:15] for p in (root / "data" / "chains").glob("ticker=*/date=*.parquet")})
+    summ = []
+    for L in labels:
+        if not (root / "data" / "features" / f"date={L}.parquet").exists():
+            (root / "data" / "features").mkdir(parents=True, exist_ok=True)
+            pd.DataFrame({"ticker": [], "spot": []}).to_parquet(root / "data" / "features" / f"date={L}.parquet")
+        session, ch, feats = read_label(root, L)
+        if session is None:
+            continue
+        for t, g in ch.groupby("ticker"):
+            OS.append_stock(t, g, chain_dir=chain_dir, keep="old")
+        summ.append(OS.summarize(ch, feats if len(feats) else None))
+        log(f"  {L} -> trading day {session}: {ch['ticker'].nunique()} stocks, {len(ch):,} contracts")
+    if summ:
+        OS.upsert_summary(pd.concat(summ, ignore_index=True), store, prefer_existing_cols=tuple(OS.SUMMARY_COLS))
 
-    oi_rows = pd.DataFrame()
-    if oi_path:
-        print("Reading oi_history ...")
-        oi = pd.read_parquet(oi_path)
+
+def inbox_args(folder: Path) -> list[str]:
+    """Turn the files found in the import inbox into command-line arguments."""
+    import zipfile
+    folder = Path(folder)
+    args = []
+    for f in sorted(folder.iterdir()):
+        n = f.name.lower()
+        if n.startswith("chain_history") and n.endswith(".parquet"):
+            args += ["--chain", str(f)]
+        elif n.startswith("oi_history") and n.endswith(".parquet"):
+            args += ["--oi", str(f)]
+        elif n.startswith("gex_history") and n.endswith(".csv"):
+            args += ["--gex", str(f)]
+        elif n.endswith(".zip"):
+            out = folder / (f.stem + "_unzipped")
+            with zipfile.ZipFile(f) as z:
+                z.extractall(out)
+            hits = list(out.rglob("ticker=*"))
+            if hits:
+                root = hits[0].parent.parent       # folder holding chains/
+                args += ["--watchtower-folder", str(root.parent if root.name == "data" else root)]
+    return args
+
+
+def main(argv=None, store=None, chain_dir=None, log=print):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--chain"); ap.add_argument("--oi"); ap.add_argument("--gex")
+    ap.add_argument("--watchtower-folder")
+    ap.add_argument("--inbox", help="folder of downloaded inbox files (file types detected by name)")
+    a = ap.parse_args(argv)
+    if a.inbox:
+        extra = inbox_args(Path(a.inbox))
+        if len(extra) > 1:
+            if len(extra) > 2 and extra.count("--watchtower-folder") > 1:
+                log("Note: only the first Watchtower zip is used per run.")
+            a = ap.parse_args(extra)
+        else:
+            log("The inbox is empty - nothing to import."); return
+    existing = OS.read_summary(store=store)
+    have = set(zip(existing["date"].dt.date, existing["ticker"])) if len(existing) else set()
+
+    if a.watchtower_folder:
+        log("Importing the Watchtower-style folder ...")
+        import_watchtower_folder(Path(a.watchtower_folder), store, chain_dir, log)
+
+    gx = read_gex_csv(a.gex) if a.gex else None
+    if a.chain:
+        log("Importing the flat chain file ...")
+        ch = pd.read_parquet(a.chain)
+        ch["date"] = pd.to_datetime(ch["date"]).dt.date
+        ch["ticker"] = ch["ticker"].astype(str).str.upper()
+        new_keys = set(zip(ch["date"], ch["ticker"])) - have
+        ch = ch[[k in new_keys for k in zip(ch["date"], ch["ticker"])]]
+        if len(ch):
+            ch = _fill_chain(ch, "chain_history", store, chain_dir, log)
+            OS.upsert_summary(OS.summarize(ch, compute_gex=gx is None), store,
+                              prefer_existing_cols=tuple(OS.SUMMARY_COLS))
+            have |= set(zip(ch["date"], ch["ticker"]))
+        log(f"  {len(new_keys):,} stock-days were new")
+    if a.oi:
+        log("Importing open-interest-only history ...")
+        oi = pd.read_parquet(a.oi)
         oi["date"] = pd.to_datetime(oi["date"]).dt.date
-        oi_rows = oi[oi["date"] < first_chain].copy()
-        print(f"  {len(oi):,} rows; {len(oi_rows):,} rows from before {first_chain} are added to the chain store")
-        oi_rows = OS.normalize_chain(oi_rows.assign(source="oi_history"), "oi_history")
-
-    gx = read_gex_csv(gex_path) if gex_path else pd.DataFrame()
-    if len(gx):
-        print(f"Read gex_history: {len(gx):,} rows, {gx['date'].min()} to {gx['date'].max()}")
-
-    print("Writing chain parts (each under 95 MB) ...")
-    full = pd.concat([oi_rows, chain], ignore_index=True) if len(oi_rows) else chain
-    parts = OS.write_history_parts(full, store)
-    for p in parts:
-        print(f"  {p['file']}: {p['first']} to {p['last']}, {p['rows']:,} rows, {p['bytes'] / 2**20:.1f} MB")
-
-    cal = {"pairs": 0, "scale": 1.0}
-    if len(gx):
-        print("Calibrating GEX against gex_history.csv ...")
-        cal = calibrate(chain, gx)
-        if cal["pairs"]:
-            print(f"  {cal['pairs']} stock-days compared. Scale factor {cal['scale']:.4g} "
-                  f"(75th/25th percentile ratio {cal['scale_spread']:.3g}).")
-            print(f"  Call wall same strike: {cal['call_wall_match']:.0%}; put wall same strike: {cal['put_wall_match']:.0%}; "
-                  f"median flip gap {cal['flip_median_gap_pct']:.2%} of spot.")
-            cal["detail"].to_csv(P["root"] / "gex_calibration.csv", index=False)
-
-    print("Building the daily summary ...")
-    summ = OS.summarize(chain, compute_gex=False)
-    if len(oi_rows):
-        oi_sum = OS.summarize(oi_rows, compute_gex=False)
-        summ = pd.concat([oi_sum, summ], ignore_index=True)
-    if len(gx):
-        summ = summ.drop(columns=["gex_flip", "call_wall_price", "call_wall_gex", "put_wall_price", "put_wall_gex",
-                                  "gex_source", "gex_total"])
-        summ = summ.merge(gx.rename(columns={"spot": "spot_gex"}), on=["date", "ticker"], how="outer")
-        summ["spot"] = summ["spot"].combine_first(summ["spot_gex"])
-        summ = summ.drop(columns="spot_gex")
-    # chain days without gex_history rows: compute GEX here
-    need = summ[summ["gex_source"].isna() & summ["date"].isin(set(chain["date"]))][["date", "ticker"]] \
-        if "gex_source" in summ else summ[["date", "ticker"]].iloc[0:0]
-    if len(need):
-        print(f"  computing GEX for {len(need):,} stock-days not in gex_history ...")
-        sub = chain.merge(need, on=["date", "ticker"])
-        comp = OS.summarize(sub, gex_scale=cal.get("scale", 1.0))[
-            ["date", "ticker", "gex_total", "gex_flip", "call_wall_price", "call_wall_gex", "put_wall_price",
-             "put_wall_gex", "gex_source"]]
-        summ = summ.set_index(["date", "ticker"]); comp = comp.set_index(["date", "ticker"])
-        summ.update(comp); summ = summ.reset_index()
-    summ["source"] = summ["source"].fillna("gex_history")
-    for c in OS.SUMMARY_COLS:
-        if c not in summ:
-            summ[c] = np.nan
-    OS.upsert_summary(summ[OS.SUMMARY_COLS], store)
-
-    tickers = sorted(set(chain["ticker"]) | (set(gx["ticker"]) if len(gx) else set()))
-    P["universe"].write_text("\n".join(tickers) + "\n")
-    m = OS.load_manifest(store)
-    m.update({"gex_scale": cal.get("scale", 1.0), "imported": dt.datetime.now().isoformat(timespec="minutes"),
-              "last_update": str(chain["date"].max())})
-    OS.save_manifest(m, store)
+        oi["ticker"] = oi["ticker"].astype(str).str.upper()
+        oi = oi[[k not in have for k in zip(oi["date"], oi["ticker"])]]
+        if len(oi):
+            oi = _fill_chain(oi, "oi_history", store, chain_dir, log)
+            OS.upsert_summary(OS.summarize(oi), store, prefer_existing_cols=tuple(OS.SUMMARY_COLS))
+        log(f"  {oi[['date', 'ticker']].drop_duplicates().shape[0]:,} stock-days were new")
+    if gx is not None:
+        log("Adding GEX history to the summary (only where it is missing) ...")
+        g = gx.copy()
+        for c in OS.SUMMARY_COLS:
+            if c not in g:
+                g[c] = np.nan
+        g["source"] = "gex_history"
+        OS.upsert_summary(g[OS.SUMMARY_COLS], store, prefer_existing_cols=tuple(OS.SUMMARY_COLS))
+    P = OS.paths(store)
+    s = OS.read_summary(store=store)
+    uni = sorted(set(OS.universe(store)) | set(s["ticker"]))
+    P["universe"].parent.mkdir(parents=True, exist_ok=True)
+    P["universe"].write_text("\n".join(uni) + "\n")
     st = OS.status(store)
-    print(f"Done in {(dt.datetime.now() - t0).seconds}s: {st['summary_days']} days x {st['tickers']} tickers in the summary "
-          f"({st['summary_first']} to {st['summary_last']}); {len(st['parts'])} chain part(s); universe of {len(tickers)} tickers.")
+    log(f"Summary now covers {st['summary_days']} days ({st['summary_first']} to {st['summary_last']}) for "
+        f"{st['tickers']} tickers. Next: python -m atrade.release upload   then commit options_data/.")
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--chain", required=True); ap.add_argument("--oi"); ap.add_argument("--gex")
-    a = ap.parse_args()
-    main(a.chain, a.oi, a.gex)
+    main()
