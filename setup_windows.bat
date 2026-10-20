@@ -10,8 +10,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-%PY% -m venv .venv
-call .venv\Scripts\activate.bat
+REM Keep the environment outside OneDrive (avoids sync locks and the 260-char path limit).
+set VENV=%LOCALAPPDATA%\academic_trading_venv
+%PY% -m venv "%VENV%"
+call "%VENV%\Scripts\activate.bat"
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 echo.
