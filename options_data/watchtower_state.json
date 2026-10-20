@@ -346,6 +346,16 @@
    "session": "2026-09-21",
    "sha": "7fad3f10302c253870a241c4fab33c6fd6d06bda"
   },
+  "2026-09-28": {
+   "contracts": 137661,
+   "session": "2026-09-28",
+   "sha": "4b7a4fc025fe2120e5f75bb34f367bef80a19104"
+  },
+  "2026-09-29": {
+   "contracts": 138565,
+   "session": "2026-09-29",
+   "sha": "ee3902e8c3b922a5fd6da556e6ce0b0128b15981"
+  },
   "2026-10-01": {
    "contracts": 137684,
    "session": "2026-09-30",
@@ -412,7 +422,7 @@
    "sha": "b04bbc7de383929e10c898bd454618761ac1f464"
   }
  },
- "last_sync": "2026-10-19T22:55-04:00",
+ "last_sync": "2026-10-19T23:40-04:00",
  "sessions": {
   "2026-06-02": {
    "contracts": 137563,
@@ -674,6 +684,14 @@
    "contracts": 133847,
    "label": "2026-09-22"
   },
+  "2026-09-28": {
+   "contracts": 137661,
+   "label": "2026-09-28"
+  },
+  "2026-09-29": {
+   "contracts": 138565,
+   "label": "2026-09-29"
+  },
   "2026-09-30": {
    "contracts": 137684,
    "label": "2026-10-01"
@@ -727,5 +745,5 @@
    "label": "2026-10-20"
   }
  },
- "watchtower_commit": "4484aeb74e3f74ef4ea29b51936901c0f52948de"
+ "watchtower_commit": "28edbdf037bf5630f4bf4c27ba47e19eb755dfbb"
 }
