@@ -52,7 +52,21 @@ def load_prices(ticker: str, years: int, refresh: bool = False) -> tuple[pd.Data
         if path.exists():
             df = pd.read_csv(path, index_col=0, parse_dates=True)
             return df, f"Saved copy from {dt.date.fromtimestamp(path.stat().st_mtime)} (download failed: {e})"
+        repo = repo_prices(ticker)
+        if repo is not None:
+            return repo, f"price_data/ in the repo (to {repo.index[-1].date()}; Yahoo download failed: {e})"
         raise
+
+
+def repo_prices(ticker: str) -> pd.DataFrame | None:
+    """Price history saved by 'python -m atrade.download_prices' (price_data/ in the repo)."""
+    from .config import ROOT
+    p = ROOT / "price_data" / (ticker.upper().replace("^", "_").replace("/", "-") + ".parquet")
+    if not p.exists():
+        return None
+    df = pd.read_parquet(p)
+    df.index = pd.DatetimeIndex(df.index)
+    return df[["Open", "High", "Low", "Close", "Volume"]]
 
 
 def load_vix(years: int) -> pd.Series | None:

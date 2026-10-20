@@ -151,3 +151,29 @@ def test_bull_flag_detected():
     g = sigs[0]
     assert g.idx >= 49 + S["w_flag"] and g.direction == 1
     assert g.target == pytest.approx(g.line_value(g.idx) + (100 - 50))
+
+
+def test_download_prices_layout_and_retry_logic(tmp_path):
+    """The price downloader with a fake Yahoo: adjusted prices, raw close, manifest, retries."""
+    from atrade import download_prices as DP
+    idx = pd.bdate_range("2025-01-01", periods=30)
+    raw = pd.DataFrame({"Open": 100.0, "High": 102.0, "Low": 98.0, "Close": 101.0, "Adj Close": 50.5,
+                        "Volume": 1e6, "Dividends": 0.0, "Stock Splits": 0.0}, index=idx)
+    calls = {"BAD": 0}
+
+    def fake(t):
+        if t == "BAD":
+            calls["BAD"] += 1
+            raise RuntimeError("no data")
+        return DP.to_table(raw)
+    rc = DP.main(["--tickers", "AAPL", "BRK.B", "^VIX", "BAD"], fetcher=fake, out=tmp_path)
+    assert rc == 1
+    assert sorted(p.name for p in tmp_path.glob("*.parquet")) == ["AAPL.parquet", "BRK.B.parquet", "_VIX.parquet"]
+    df = pd.read_parquet(tmp_path / "AAPL.parquet")
+    assert df["Close"].iloc[0] == 50.5 and df["Open"].iloc[0] == 50.0 and df["Close_raw"].iloc[0] == 101.0
+    man = pd.read_csv(tmp_path / "manifest.csv").set_index("ticker")
+    assert man.loc["AAPL", "days"] == 30 and man.loc["AAPL", "bad_bars"] == 0
+    assert "no data" in man.loc["BAD", "error"]
+    # --missing-only retries only the failed ticker
+    DP.main(["--tickers", "AAPL", "BAD", "--missing-only"], fetcher=fake, out=tmp_path)
+    assert calls["BAD"] == 2
