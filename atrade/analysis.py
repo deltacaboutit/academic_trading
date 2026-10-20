@@ -15,7 +15,12 @@ from .rating import RATING_NAME, live_votes, rating_signals, run_rating
 from .sentiment import extreme_info, sentiment_signals
 from .trades import pattern_trade, trade_plan
 from .trend import alexander_signals, trend_signals, trend_state
-from .validation import evaluate_rules, pass_table, pattern_outcomes
+from dataclasses import replace
+
+from . import lmw
+from .results import lmw_settings, load_bootstrap
+from .validation import (blocks, evaluate_rules, forecast_accuracy, full_pass_table, pass_table, pattern_outcomes,
+                         rating_performance, reality_check, robustness_checks, rule_daily_excess)
 from .volume import relative_volume
 from .zones import zone_analysis
 
@@ -78,6 +83,11 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
 
     all_sigs = sig_trend + sig_gauge + sig_zone + sig_pat + sig_sent
 
+    step("[LMW] kernel-regression patterns (shadow ratings only)")
+    lset = lmw_settings()
+    lmw_det = lmw.detect(c, df["Volume"].to_numpy(float), lset["h"])
+    sig_lmw = lmw.to_signals(lmw_det, c, lset["directions"], live_days=int(s["live_days_indicator"]))
+
     step("[GEX] add-on: gamma levels (back-test only, no rating vote)")
     gex_lv = None
     sig_gex: list = []
@@ -91,10 +101,12 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
 
     step("Framework 9: back-testing every rule")
     by_rule = defaultdict(list)
-    for sg in all_sigs + sig_alex + sig_gex:
+    for sg in all_sigs + sig_alex + sig_gex + sig_lmw:
         by_rule[sg.rule].append(sg)
     res = evaluate_rules(by_rule, df, s)
-    passes = pass_table(res, s)
+    from .bootstrap import verdict_table
+    boot = load_bootstrap(ticker) if ticker.upper() != "DEMO" else None
+    passes = full_pass_table(res, s, verdict_table(boot, s) if boot else None)
     allowed = None
     if s.get("only_passed_rules"):
         allowed = set(passes.loc[passes["verdict"].str.startswith("Passed"), "rule"])
@@ -103,9 +115,35 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
     rating_df, index = run_rating(n, all_sigs, state, rv, s, allowed)
     rating_df.index = df.index
     rsig = rating_signals(rating_df["rating"].to_numpy())
-    res_rating = evaluate_rules({"Official rating (variant A)": rsig}, df, s)
+
+    # [LMW] shadow ratings: B = LMW patterns instead of textbook patterns, C = both at half weight
+    step("[LMW] shadow ratings B and C")
+    sig_b = [x for x in all_sigs if x.kind != "pattern"] + sig_lmw
+    sig_c = ([x for x in all_sigs if x.kind != "pattern"] + [replace(x, weight=x.weight * 0.5) for x in sig_pat]
+             + [replace(x, weight=x.weight * 0.5) for x in sig_lmw])
+    rating_b, _ = run_rating(n, sig_b, state, rv, s, None)
+    rating_c, _ = run_rating(n, sig_c, state, rv, s, None)
+    rating_b.index = rating_c.index = df.index
+    res_rating = evaluate_rules({"Official rating (variant A)": rsig,
+                                 "[LMW] Shadow rating B": rating_signals(rating_b["rating"].to_numpy()),
+                                 "[LMW] Shadow rating C": rating_signals(rating_c["rating"].to_numpy())}, df, s)
     res = pd.concat([res, res_rating], ignore_index=True)
-    passes = pass_table(res, s)
+
+    step("Framework 9: data-snooping check, forecast accuracy, robustness")
+    a_ft, b_ft = blocks(n, s)["Final test"]
+    cost1 = float(s["cost_one_way"]) + float(s["spread_one_way"])
+    rc_rules = {k: v for k, v in by_rule.items() if not k.startswith("Alexander")}
+    rc = reality_check(rule_daily_excess(rc_rules, c, int(s["judge_period"]), 2 * cost1, a_ft, b_ft))
+    fc = forecast_accuracy(sig_pat, c, a_ft, b_ft)
+    fc_all = forecast_accuracy(sig_pat, c)
+    robust = robustness_checks(by_rule, df, s)
+    variants = pd.DataFrame([{"variant": nm, **rating_performance(rr["rating"].to_numpy(), c, a_ft, b_ft, cost1)}
+                             for nm, rr in (("A - official (textbook)", rating_df), ("B - LMW patterns", rating_b),
+                                            ("C - both, half weight", rating_c))])
+    a_tr, b_tr = blocks(n, s)["Training"]
+    lmw_info = {"Training": lmw.info_table(lmw_det, c, a_tr, b_tr), "Final test": lmw.info_table(lmw_det, c, a_ft, b_ft),
+                "Whole history": lmw.info_table(lmw_det, c)}
+    passes = full_pass_table(res, s, verdict_table(boot, s) if boot else None)
 
     t = n - 1
     votes = live_votes(t, index, int(state[t]), rv, s)
@@ -138,4 +176,8 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         "rating": rating_df, "rating_now": RATING_NAME[cur], "votes": votes, "plan": plan,
         "results": res, "passes": passes, "pattern_outcomes": pattern_outcomes(sig_pat, n, s),
         "allowed": allowed, "gex": gex_lv, "gex_signals": sig_gex,
+        "lmw_detections": lmw_det, "lmw_signals": sig_lmw, "lmw_settings": lset, "lmw_info": lmw_info,
+        "rating_b": rating_b, "rating_c": rating_c, "variants": variants,
+        "reality_check": rc, "forecast": {"Final test": fc, "Whole history": fc_all}, "robustness": robust,
+        "bootstrap": boot,
     }

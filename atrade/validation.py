@@ -383,3 +383,21 @@ def full_pass_table(res: pd.DataFrame, s: dict, boot_verdicts: pd.DataFrame | No
         return "Passed" if (r["step 2 + 7"].startswith("Passed") and b == "passed") else "Not passed"
     t["verdict"] = t.apply(final, axis=1)
     return t
+
+
+# ---- Rating variants: performance incl. drawdown (framework 9b head-to-head) ---------
+
+def rating_performance(rating: np.ndarray, close: np.ndarray, a: int, b: int, cost_one_way: float) -> dict:
+    """Follow a rating (+1 buy / -1 sell / 0 hold) day by day, close to close, with costs on
+    every change. Returns total log return, buy-and-hold, excess, max drawdown, hit rate."""
+    r = np.zeros(len(close)); r[1:] = np.diff(np.log(close))
+    pos = np.zeros(len(close)); pos[1:] = rating[:-1]          # rating known at the close, held next day
+    strat = pos * r - cost_one_way * np.abs(np.diff(np.concatenate([[0], pos])))
+    s_, m_ = strat[a:b], r[a:b]
+    eq = np.cumsum(s_)
+    dd = float((eq - np.maximum.accumulate(np.concatenate([[0], eq]))[1:]).min()) if len(eq) else np.nan
+    active = pos[a:b] != 0
+    hits = (np.sign(pos[a:b]) * m_)[active]
+    return {"total_return": float(s_.sum()), "buy_and_hold": float(m_.sum()), "excess": float(s_.sum() - m_.sum()),
+            "max_drawdown": dd, "days_in_market": int(active.sum()),
+            "hit_rate_days": float((hits > 0).mean()) if len(hits) else np.nan}
