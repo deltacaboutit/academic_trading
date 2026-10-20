@@ -26,13 +26,22 @@ def roc_levels(r: np.ndarray, train: int, tp_w: int):
         return ul, dl
     idx = tps["idx"].to_numpy(); price = tps["price"].to_numpy(); kind = tps["kind"].to_numpy()
     known = tps["known"].to_numpy()
-    for t in range(first_valid + train - 1, n):
-        m = (idx >= t - train + 1) & (idx <= t) & (known <= t)
-        pk = m & (kind == "P"); tr = m & (kind == "T")
-        if pk.any():
-            ul[t] = price[pk].mean()
-        if tr.any():
-            dl[t] = price[tr].mean()
+    # A turning point counts on day t when it is confirmed (known <= t) and still inside the
+    # training window (idx >= t - train + 1). It enters on day `known` and leaves on day
+    # idx + train. Running sums of these entries/exits give the averages for every day at once.
+    start_t = first_valid + train - 1
+    for which, out in (("P", ul), ("T", dl)):
+        m = kind == which
+        enter = known[m]; leave = idx[m] + train; val = price[m]
+        ok = leave > enter
+        enter, leave, val = enter[ok], leave[ok], val[ok]
+        cnt = np.zeros(n + 1); tot = np.zeros(n + 1)
+        np.add.at(cnt, np.minimum(enter, n), 1); np.add.at(tot, np.minimum(enter, n), val)
+        np.add.at(cnt, np.minimum(leave, n), -1); np.add.at(tot, np.minimum(leave, n), -val)
+        c, s_ = np.cumsum(cnt)[:n], np.cumsum(tot)[:n]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            avg = np.where(c > 0, s_ / np.where(c > 0, c, 1), np.nan)
+        out[start_t:] = avg[start_t:]
     return ul, dl
 
 
