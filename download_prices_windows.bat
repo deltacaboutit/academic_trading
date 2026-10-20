@@ -2,7 +2,7 @@
 REM Downloads 25 years of daily prices for the S&P 500 stocks (plus SPY, QQQ, IWM and the VIX)
 REM into the price_data folder, then offers to upload them to GitHub.
 cd /d "%~dp0"
-call .venv\Scripts\activate.bat
+call "%LOCALAPPDATA%\academic_trading_venv\Scripts\activate.bat"
 git pull --ff-only
 python -m atrade.download_prices %*
 if errorlevel 1 (
