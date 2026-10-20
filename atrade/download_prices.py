@@ -4,6 +4,7 @@
     python -m atrade.download_prices --years 30
     python -m atrade.download_prices --tickers AAPL MSFT SPY
     python -m atrade.download_prices --missing-only   # only tickers not downloaded yet / that failed
+    python -m atrade.download_prices --info           # company info only -> price_data/info.csv
 
 Tickers: options_data/universe.txt (the S&P 500 stocks plus SPY, QQQ and IWM
 that Watchtower collects), plus the VIX index (^VIX).
@@ -83,6 +84,45 @@ def to_table(h: pd.DataFrame) -> pd.DataFrame:
     return out[COLS].astype(float)
 
 
+EXCHANGE_GROUP = {   # Yahoo exchange codes -> the two groups LMW report separately
+    "NMS": "Nasdaq", "NGM": "Nasdaq", "NCM": "Nasdaq", "NAS": "Nasdaq",
+    "NYQ": "NYSE/AMEX", "NYS": "NYSE/AMEX", "ASE": "NYSE/AMEX", "AMX": "NYSE/AMEX", "PCX": "NYSE/AMEX",
+}
+
+
+def fetch_info(ticker: str, tries: int = 3) -> dict:
+    import yfinance as yf
+    err = None
+    for k in range(tries):
+        try:
+            i = yf.Ticker(yahoo_symbol(ticker)).info or {}
+            ex = i.get("exchange") or ""
+            return {"ticker": ticker, "name": i.get("shortName") or i.get("longName"), "exchange": ex,
+                    "exchange_group": EXCHANGE_GROUP.get(ex, "Other"), "quote_type": i.get("quoteType"),
+                    "sector": i.get("sector"), "industry": i.get("industry"),
+                    "shares_outstanding": i.get("sharesOutstanding"), "market_cap": i.get("marketCap"),
+                    "info_date": dt.date.today().isoformat()}
+        except Exception as e:
+            err = e
+            time.sleep(3 * (k + 1))
+    return {"ticker": ticker, "error": str(err)[:200]}
+
+
+def download_info(tickers: list[str], out: Path, workers: int = 4, fetcher=None) -> pd.DataFrame:
+    fetcher = fetcher or fetch_info
+    rows = []
+    with ThreadPoolExecutor(workers) as pool:
+        for i, r in enumerate(pool.map(fetcher, tickers), 1):
+            rows.append(r)
+            if i % 50 == 0 or i == len(tickers):
+                print(f"  info {i}/{len(tickers)}")
+    df = pd.DataFrame(rows).sort_values("ticker")
+    out.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out / "info.csv", index=False)
+    print(df["exchange_group"].value_counts(dropna=False).to_string() if "exchange_group" in df else "")
+    return df
+
+
 def checks(df: pd.DataFrame) -> dict:
     """Quick data checks (the full Framework 1 cleaning runs inside the tool)."""
     bad = ((df["High"] < df["Low"]) | (df["Close"] > df["High"] * 1.0001) | (df["Close"] < df["Low"] * 0.9999)
@@ -116,7 +156,15 @@ def main(argv=None, fetcher=None, out: Path = OUT) -> int:
     ap.add_argument("--tickers", nargs="*")
     ap.add_argument("--missing-only", action="store_true", help="skip tickers that already have a file")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--info", action="store_true", help="download company info (exchange, shares) only")
     a = ap.parse_args(argv)
+    if a.info:
+        tickers = [t.upper() for t in a.tickers] if a.tickers else load_universe()
+        print(f"Downloading company info for {len(tickers)} tickers ...")
+        df = download_info(tickers, out, a.workers, fetcher=fetcher if fetcher and a.tickers else None)
+        bad = int(df["error"].notna().sum()) if "error" in df else 0
+        print(f"Saved price_data/info.csv ({len(df) - bad} ok, {bad} failed).")
+        return 0
     fetcher = fetcher or (lambda t: fetch(t, a.years))
     tickers = [t.upper() for t in a.tickers] if a.tickers else load_universe()
     if a.missing_only:
