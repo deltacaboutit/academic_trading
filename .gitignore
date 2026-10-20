@@ -226,3 +226,7 @@ data/
 !options_data/
 # Put the one-time import files here (not committed)
 import/
+
+# research runner scratch space
+work/
+shards/

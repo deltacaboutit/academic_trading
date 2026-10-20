@@ -68,6 +68,9 @@ DEFAULTS: dict = {
     "wt_pattern": 1.0, "wt_support": 1.0, "wt_resistance": 0.5, "wt_gauge": 0.5,
     "wt_sent_buy": 1.0, "wt_sent_sell": 0.5,
     "only_passed_rules": False,       # use only rules that passed the back-test
+    "use_tuned_weights": False,       # use the weights tuned on training data (results/tuned_weights.json)
+    "boot_B": 500,                    # artificial histories per null model in "Run full validation"
+    "dtw_query_days": 61, "dtw_tau": 15.0, "dtw_band": 0, "dtw_top": 10,
     # ---- Framework 8: trade management -----------------------------------
     "stop_days": 2, "stop_loss": 0.04, "default_hold": 10,
     # ---- Framework 9: validation -----------------------------------------

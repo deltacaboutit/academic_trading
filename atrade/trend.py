@@ -68,20 +68,18 @@ def trend_state(close: np.ndarray, s: dict) -> np.ndarray:
     above = (close > ma).astype(float)
     above[np.isnan(ma)] = np.nan
     out = np.zeros(n)
-    x = np.arange(N, dtype=float)
-    xm = x - x.mean()
-    denom = (xm ** 2).sum()
-    for t in range(N - 1, n):
-        seg = close[t - N + 1:t + 1]
-        share_seg = above[t - N + 1:t + 1]
-        if np.isnan(share_seg).any():
-            continue
-        slope = (xm * (seg - seg.mean())).sum() / denom
-        share = share_seg.mean()
-        if slope > 0 and share > s["trend_up_share"]:
-            out[t] = 1
-        elif slope < 0 and share < s["trend_down_share"]:
-            out[t] = -1
+    if n < N:
+        return out
+    from numpy.lib.stride_tricks import sliding_window_view as swv
+    x = np.arange(N, dtype=float); xm = x - x.mean(); denom = (xm ** 2).sum()
+    seg = swv(np.asarray(close, float), N)                       # windows ending at t = N-1 .. n-1
+    slope = (seg - seg.mean(axis=1, keepdims=True)) @ xm / denom
+    sh = swv(above, N)
+    valid = ~np.isnan(sh).any(axis=1)
+    share = np.where(valid, np.nanmean(np.where(np.isnan(sh), 0, sh), axis=1), np.nan)
+    up = valid & (slope > 0) & (share > s["trend_up_share"])
+    dn = valid & (slope < 0) & (share < s["trend_down_share"])
+    out[N - 1:] = np.where(up, 1, np.where(dn, -1, 0))
     return out
 
 

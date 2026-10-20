@@ -119,8 +119,9 @@ def bollinger(p: np.ndarray, w=20, k=2.0):
     dev2 = (p - mid) ** 2
     sig_book = np.sqrt(sma(dev2, w))
     sig_usual = np.full(len(p), np.nan)
-    for t in range(w - 1, len(p)):
-        sig_usual[t] = np.std(p[t - w + 1:t + 1])
+    if len(p) >= w:
+        from numpy.lib.stride_tricks import sliding_window_view as swv
+        sig_usual[w - 1:] = swv(p, w).std(axis=1)
     return {
         "mid": mid,
         "up": mid + k * sig_book, "low": mid - k * sig_book,

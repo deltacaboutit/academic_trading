@@ -30,8 +30,15 @@ Each time you analyse a stock, the tool runs the frameworks from your design doc
 - Ratings use daily closing prices. Check them after 4:00 pm New York time.
 - This is a research tool, not financial advice.
 
-### Not in version 1 yet
+### How the rules are proven (version 2)
 
-- Framework 9: the random-price bootstrap (step 3), counting patterns in random series (step 4), the data-snooping correction (step 6) and the forecast-accuracy measures.
-- The LMW items (kernel-regression turning points, the ten LMW patterns, turnover trend and the shadow ratings).
-- The Dynamic Time Warping similarity panel (Framework 4d).
+- **Validation tab:** a rule counts only if, in the final 20% of history, it beats buy-and-hold after costs **and**
+  beats artificial price histories. These are built from the stock's own daily moves, shuffled so that any real pattern
+  is destroyed, using the book's AR(1), GARCH-M and E-GARCH models. A model is used only if it fits.
+- **The many-rules problem:** when dozens of rules are tried, one will look good by luck. White's Reality Check and
+  Hansen's SPA test allow for that.
+- **LMW tab:** a second, independent way of finding patterns (smoothed prices, ten patterns from Lo, Mamaysky and
+  Wang 2000). It never changes the official rating. Shadow ratings B and C show what would happen if it did.
+- **Similarity tab:** past stretches shaped like the last two months, and what happened next. Context only.
+- **All stocks tab:** the same tests on every stock at once. A rule that works on one stock may be luck; a rule that
+  works on most stocks is more convincing.

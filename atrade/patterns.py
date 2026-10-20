@@ -238,6 +238,14 @@ def flags_pennants_wedges(close, s, trend_state):
 
 def _bull(name, close, t, p, known, thor, trend_state):
     P1, T1, P2, T2 = p; tP1, tT1, tP2, tT2 = t
+    # cheap shape checks first (the PIP search below is the slow part)
+    sP_, sT_ = (P2 - P1) / (tP2 - tP1), (T2 - T1) / (tT2 - tT1)
+    if name == "flag" and not (P2 < P1 and T2 < T1):
+        return None
+    if name == "pennant" and not (P2 < P1 and T2 > T1):
+        return None
+    if name == "wedge" and not (0 > sT_ > sP_):
+        return None
     prior = _prior_points(close, tP1, True, thor)
     if prior is None:
         return None
@@ -288,6 +296,13 @@ def _bull(name, close, t, p, known, thor, trend_state):
 
 def _bear(name, close, t, p, known, thor, trend_state):
     T1, P1, T2, P2 = p; tT1, tP1, tT2, tP2 = t
+    sP_, sT_ = (P2 - P1) / (tP2 - tP1), (T2 - T1) / (tT2 - tT1)
+    if name == "flag" and not (P2 > P1 and T2 > T1):
+        return None
+    if name == "pennant" and not (P2 < P1 and T2 > T1):
+        return None
+    if name == "wedge" and not (sT_ > sP_ > 0):
+        return None
     prior = _prior_points(close, tT1, False, thor)
     if prior is None:
         return None

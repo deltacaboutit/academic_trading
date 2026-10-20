@@ -114,11 +114,12 @@ if not res["quality"]["passed"]:
     h2.error(f"Data check failed: {res['quality']['worst_year_missing']:.1%} of trading days were missing in "
              f"{res['quality']['worst_year']} (limit 5%). Treat this rating with extra caution.")
 
-tabs = st.tabs(["Rating", "Chart", "Signals", "Back-test", "Watch list", "Options data",
-                "Data quality", "Settings", "How it works"])
+tabs = st.tabs(["Rating", "Chart", "Signals", "Back-test", "Validation", "LMW", "Similarity", "Watch list",
+                "All stocks", "Options data", "Data quality", "Settings", "How it works"])
 
 # =============================================================== RATING ====
 with tabs[0]:
+    SU = res.get("settings_used", S)          # effective settings (tuned weights if switched on)
     rt = res["rating"]
     word = res["rating_now"]
     last = rt.iloc[-1]
@@ -158,17 +159,17 @@ with tabs[0]:
                    f'background:{col};border-radius:6px"></div>'
                    f'<div style="position:absolute;left:50%;top:-3px;width:2px;height:18px;background:#57606a"></div></div>')
             st.markdown(f"**{label}** &nbsp; <span style='color:{col};font-weight:700'>{v:+.2f}</span> "
-                        f"<span class='small-note'>· weight {S['w_' + {'T': 'trend', 'R': 'reversal', 'S': 'sentiment'}[g]]:.2f} · {desc}</span>{bar}",
+                        f"<span class='small-note'>· weight {SU['w_' + {'T': 'trend', 'R': 'reversal', 'S': 'sentiment'}[g]]:.2f} · {desc}</span>{bar}",
                         unsafe_allow_html=True)
             st.write("")
 
         G = [last["T"], last["R"], last["S"]]
         def chk(ok, text):
             return f"<span class='{'check-ok' if ok else 'check-no'}'>{'✔' if ok else '✘'}</span> {text}"
-        b = [chk(last["score"] >= S["buy_cutoff"], f"score ≥ {S['buy_cutoff']:+.2f}"),
+        b = [chk(last["score"] >= SU["buy_cutoff"], f"score ≥ {SU['buy_cutoff']:+.2f}"),
              chk(sum(x > 0 for x in G) >= 2, "at least 2 of 3 groups positive"),
              chk(min(G) >= -S["veto_level"], f"no group below −{S['veto_level']:.2f}")]
-        sl = [chk(last["score"] <= S["sell_cutoff"], f"score ≤ {S['sell_cutoff']:+.2f}"),
+        sl = [chk(last["score"] <= SU["sell_cutoff"], f"score ≤ {SU['sell_cutoff']:+.2f}"),
               chk(sum(x < 0 for x in G) >= 2, "at least 2 of 3 groups negative"),
               chk(max(G) <= S["veto_level"], f"no group above +{S['veto_level']:.2f}")]
         st.markdown("**Buy needs:** " + " &nbsp; ".join(b), unsafe_allow_html=True)
@@ -417,8 +418,232 @@ with tabs[3]:
             st.caption("In the book's tests (Tables 5.4–5.5) most pattern trades were stopped out, and similar shares "
                        "appeared in random price series.")
 
-# =========================================================== WATCH LIST ====
+# ============================================================ VALIDATION ====
 with tabs[4]:
+    st.write("Framework 9's pass rule: in the **final test** period a rule must beat buy-and-hold after costs "
+             "(steps 2 and 7) **and** beat the artificial price histories of the random-price test (step 3).")
+    pt = res["passes"]
+    st.dataframe(pd.DataFrame({
+        "Rule": pt["rule"], "Signals": pt["n"], "Avg return after costs": pt["mean_net"].map(pct),
+        "Buy-and-hold": pt["mean_market"].map(pct),
+        "p (t-test)": pt["p"].map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"),
+        "Steps 2 + 7": pt["step 2 + 7"],
+        "Step 3 (random prices)": pt["bootstrap"].fillna("–") if "bootstrap" in pt else "–",
+        "Verdict": pt["verdict"]}), hide_index=True, height=420)
+
+    st.subheader("Step 3 – random-price test")
+    boot = res.get("bootstrap")
+    if boot:
+        st.write(f"Last run: {boot.get('created', '?')} with **{boot['B']}** artificial histories per model. "
+                 + ("" if boot["testable"] else "**No null model fits this stock, so it is not testable** (the book "
+                    "reports this outcome too)."))
+        fits = boot["fits"]
+        st.dataframe(pd.DataFrame({
+            "Model": fits["model"], "Used": fits["qualified"].map({True: "yes", False: "no"}),
+            "Leftover correlation (Ljung-Box p)": fits.get("ljung_box_p", pd.Series()).map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"),
+            "Leftover volatility clustering (ARCH p)": fits.get("arch_p", pd.Series()).map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"),
+            "Why": fits["reason"]}), hide_index=True)
+        br = boot["results"]
+        if len(br):
+            br = br[(br["block"] == "Final test") & (br["h"] == int(S["judge_period"]))]
+            st.dataframe(pd.DataFrame({
+                "Rule": br["rule"], "Model": br["model"], "Signals": br["n_real"],
+                "Real prices": br["mean_real"].map(pct), "Random prices (avg)": br["mean_sim_avg"].map(pct),
+                "p (share of random ≥ real)": br["p_adj"].map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"),
+                "Random more volatile after buys": br["p_vol"].map(lambda v: "–" if pd.isna(v) else f"{v:.0%}")}),
+                hide_index=True, height=360)
+    else:
+        st.info("No random-price test has been run for this stock yet. Run it here, or start the "
+                "'Research run (all stocks)' workflow on GitHub to test every stock.")
+    if res["ticker"] != "DEMO":
+        cB, cBtn = st.columns([1, 2])
+        Bn = cB.number_input("Histories per model", 20, 1000, int(S.get("boot_B", 500)), 20,
+                             help="The book used 100; Brock et al. and the framework use 500 (about 7 minutes per model).")
+        if cBtn.button("Run full validation for this stock", type="primary"):
+            from atrade import bootstrap as BS
+            from atrade.results import save_bootstrap, save_table
+            from atrade.validation import random_series_patterns
+            prog = st.progress(0.0, text="Fitting AR(1), GARCH-M and E-GARCH ...")
+            closes = res["df"]["Close"].to_numpy(float)
+            models_done = {"n": 0}
+
+            def cb(model, i, B):
+                prog.progress(min(1.0, i / B), text=f"{model}: artificial history {i} of {B}")
+            boot_new = BS.run(closes, S, B=int(Bn), progress=cb)
+            save_bootstrap(res["ticker"], boot_new)
+            rp = random_series_patterns(closes, S)
+            save_table(rp.assign(ticker=res["ticker"]), f"random_patterns/{res['ticker'].replace('^', '_')}.csv")
+            prog.empty()
+            st.success("Saved to the results folder. To share it, commit results/ to GitHub.")
+            st.cache_data.clear(); st.session_state.pop("res", None); st.rerun()
+
+    st.subheader("Step 4 – do the patterns appear in random prices too?")
+    from atrade.results import load_table
+    rp = load_table(f"random_patterns/{res['ticker'].replace('^', '_')}.csv")
+    if rp is not None:
+        st.dataframe(pd.DataFrame({
+            "Pattern": rp["pattern"], "Found (real)": rp["real_count"], "Found (random, avg)": rp["random_count_avg"].round(1),
+            "Target hit (real)": rp["real_target_rate"].map(lambda v: "–" if pd.isna(v) else f"{v:.0%}"),
+            "Target hit (random)": rp["random_target_rate"].map(lambda v: "–" if pd.isna(v) else f"{v:.0%}"),
+            "p (real better)": rp["p"].map(lambda v: "–" if pd.isna(v) else f"{v:.3f}")}), hide_index=True)
+        st.caption("Random series have the same start price, length, drift and volatility as the real one (10 series).")
+    else:
+        st.write("Not run yet; it runs with **Run full validation**.")
+
+    st.subheader("Step 6 – could the best rule just be luck among many?")
+    rc = res["reality_check"]
+    if pd.notna(rc.get("rc_p")):
+        st.write(f"{rc['n_rules']} rules were compared over {rc['days']} final-test days. The best one "
+                 f"(**{rc['best_rule']}**) beat buy-and-hold by {rc['best_mean_excess'] * 100:+.3f}% a day. "
+                 f"White's Reality Check p = **{rc['rc_p']:.3f}**, Hansen's SPA p = **{rc['spa_p']:.3f}**. "
+                 "Below 0.05 would mean at least one rule has a real edge even after allowing for how many were tried.")
+    st.subheader("Step 8 – how accurate are the pattern price targets?")
+    fblk = st.radio("Period", ["Final test", "Whole history"], horizontal=True, key="fcblk")
+    fc = res["forecast"][fblk]
+    if fc is not None and len(fc):
+        st.dataframe(fc.round(3), hide_index=True)
+        st.caption("Prices are divided by the break-day close. NRMSE / NPRMSE / U2 below 1 = better than forecasting "
+                   "the average / no change. POCID and POS = share of forecasts with the right direction. "
+                   "b1 near 1 and b0 near 0 = unbiased.")
+    else:
+        st.write("No pattern with a finished time limit in this period.")
+    with st.expander("Step 2 checks: bell-curve assumption, a test that does not need it, and simple returns"):
+        rb = res["robustness"]
+        if len(rb):
+            st.dataframe(rb.round(4), hide_index=True)
+            st.caption("normal_p < 0.05: returns are not bell-shaped, so trust the Mann-Whitney p more than the t-test. "
+                       "p_simple repeats the t-test on simple instead of log returns.")
+
+# =================================================================== LMW ====
+with tabs[5]:
+    ls = res["lmw_settings"]
+    st.write("Lo, Mamaysky and Wang's (2000) items run **beside** the textbook ones and never change them. "
+             f"Smoothing width **{ls['h']:.1f} days** ({ls['source']}).")
+    st.caption("The paper's cross-validation recipe gives degenerate widths on daily prices, so the width is fixed "
+               "so that patterns are found as often as LMW reported (about 8 per stock-year), chosen on training data.")
+    det = res["lmw_detections"]
+    dirs = ls["directions"]
+    if len(det):
+        cnt = det.groupby("pattern").agg(found=("pattern", "size"),
+                                         volume_increasing=("volume_trend", lambda x: int((x == "increasing").sum())),
+                                         volume_decreasing=("volume_trend", lambda x: int((x == "decreasing").sum())))
+        cnt["vote"] = [{1: "Buy", -1: "Sell"}.get(int(dirs.get(p, 0)), "Information only") for p in cnt.index]
+        st.dataframe(cnt.reset_index(), hide_index=True)
+    blk = st.radio("Information tests (framework 9b) for", ["Training", "Final test", "Whole history"], horizontal=True)
+    it = res["lmw_info"][blk]
+    st.dataframe(it.round(3), hide_index=True)
+    st.caption("A pattern is 'informative' if the one-day returns 3 days after it differ from normal returns "
+               "(decile chi-square or Kolmogorov-Smirnov test, p < 0.05). One stock rarely has enough patterns; "
+               "the All stocks tab pools every stock.")
+    st.subheader("Shadow ratings (final test)")
+    st.dataframe(res["variants"].assign(**{c: res["variants"][c].map(pct) for c in
+                                           ["total_return", "buy_and_hold", "excess", "max_drawdown"]}),
+                 hide_index=True)
+    st.caption("A = official (textbook patterns). B = LMW patterns instead. C = both, each at half weight. "
+               "Logged side by side so any difference comes from the LMW items alone.")
+    q = res["results"]; q = q[(q["block"] == "Final test") & (q["h"] == int(S["judge_period"]))]
+    pairs = [("Head-and-shoulders top", "[LMW] HS-LMW"), ("Inverse head-and-shoulders", "[LMW] IHS-LMW"),
+             ("Double top", "[LMW] DTOP-LMW"), ("Double bottom", "[LMW] DBOT-LMW"),
+             ("Official rating (variant A)", "[LMW] Shadow rating B"), ("Official rating (variant A)", "[LMW] Shadow rating C")]
+    rows = []
+    for a_, b_ in pairs:
+        A = q[q["rule"] == a_]; B_ = q[q["rule"] == b_]
+        rows.append({"Textbook": a_, "LMW": b_,
+                     "Textbook signals": int(A["n"].sum()) if len(A) else 0, "LMW signals": int(B_["n"].sum()) if len(B_) else 0,
+                     "Textbook avg": pct(A["mean_net"].iloc[0]) if len(A) else "–",
+                     "LMW avg": pct(B_["mean_net"].iloc[0]) if len(B_) else "–"})
+    st.subheader("Head-to-head on this stock (final test)")
+    st.dataframe(pd.DataFrame(rows), hide_index=True)
+
+# ============================================================ SIMILARITY ====
+with tabs[6]:
+    st.write("Past stretches whose **shape** resembles the last two months, and what prices did next "
+             "(Dynamic Time Warping, book ch. 9). **Context only – it never votes in the rating.**")
+    s1, s2, s3, s4 = st.columns(4)
+    qd = s1.number_input("Query length (days)", 20, 250, int(S.get("dtw_query_days", 61)))
+    tau = s2.number_input("Match threshold", 1.0, 200.0, float(S.get("dtw_tau", 15.0)))
+    band = s3.number_input("Band (0 = off)", 0, 60, int(S.get("dtw_band", 0)))
+    top = s4.number_input("Closest matches to list", 1, 30, int(S.get("dtw_top", 10)))
+    from atrade.similarity import find_matches
+
+    @st.cache_data(show_spinner=False)
+    def _sim(t, closes_key, qd, tau, band, top):
+        return find_matches(res["df"]["Close"].to_numpy(float), int(qd), float(tau), 20, int(band) or None, top=int(top))
+    sim = _sim(res["ticker"], str(df.index[-1]) + str(len(df)), qd, tau, band, top)
+    mt = sim["matches"]
+    if len(mt):
+        figs = go.Figure()
+        qs, qe = sim["query"]
+        qn = df["Close"].iloc[qs:qe + 1].to_numpy(); figs.add_trace(go.Scatter(y=qn / qn[0], name="Last two months",
+                                                                               line=dict(color="#24292f", width=3)))
+        for i, r in mt.head(3).iterrows():
+            seg = df["Close"].iloc[r["start_idx"]:min(n, r["end_idx"] + 21)].to_numpy()
+            figs.add_trace(go.Scatter(y=seg / seg[0], name=f"{df.index[r['start_idx']]:%b %Y} (+20 days after)",
+                                      line=dict(width=1.5, dash="dot")))
+        figs.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white",
+                           yaxis_title="Price ÷ first day", xaxis_title="Trading days")
+        st.plotly_chart(figs)
+        st.dataframe(pd.DataFrame({
+            "From": [df.index[i].date() for i in mt["start_idx"]], "To": [df.index[i].date() for i in mt["end_idx"]],
+            "Cost": mt["cost"].round(1), "Kind": mt["kind"],
+            **{f"Next {h} days": mt[f"ret_{h}d"].map(pct) for h in (5, 10, 20, 40)}}), hide_index=True)
+        sm = sim["summary"]
+        st.dataframe(pd.DataFrame({"Days ahead": sm["horizon_days"], "Matches": sm["matches"],
+                                   "Avg after matches": sm["avg_return_after_matches"].map(pct),
+                                   "Up after matches": sm["share_up"].map(lambda v: "–" if pd.isna(v) else f"{v:.0%}"),
+                                   "Avg all days": sm["avg_return_all_days"].map(pct),
+                                   "Up all days": sm["share_up_all_days"].map(lambda v: f"{v:.0%}")}), hide_index=True)
+        st.caption("'Closest' matches are listed when none fall below the threshold (the book's 15 came from its "
+                   "S&P 500 example). A handful of matches proves nothing; compare with 'all days'.")
+
+# ============================================================= ALL STOCKS ====
+with tabs[8]:
+    from atrade.results import load_json, load_table
+    info = load_json("summary/run_info.json")
+    if not info:
+        st.info("No all-stock research run yet. On GitHub: Actions → 'Research run (all stocks)' → Run workflow "
+                "(about 1–2 hours). Then press 'Get the latest data from GitHub' on the Options data tab.")
+    else:
+        st.write(f"Research run of **{info['stocks']} stocks**, {info['created']}. "
+                 + ("Split by exchange." if info.get("exchange_split") else
+                    "No exchange split yet (run download_info_windows.bat)."))
+        tw = load_json("tuned_weights.json")
+        st.subheader("Framework 7 – tuned rating weights")
+        if tw and tw.get("tuned"):
+            t_ = tw["tuned"]
+            st.write(f"Chosen on the training period only: trend **{t_['w_trend']:.2f}**, reversal "
+                     f"**{t_['w_reversal']:.2f}**, sentiment **{t_['w_sentiment']:.2f}**, cut-off ±**{t_['cutoff']:.2f}**.")
+            rows = []
+            for lab in ("framework", "tuned"):
+                for blk in ("training", "validation", "final_test"):
+                    v = tw.get(f"{lab}_{blk}") or {}
+                    rows.append({"Weights": lab, "Period": blk.replace("_", " "), "Excess per trade": pct(v.get("excess"), 3),
+                                 "Stocks": v.get("stocks"), "Trades": v.get("trades")})
+            st.dataframe(pd.DataFrame(rows), hide_index=True)
+            st.caption("Turn them on in Settings → 'Use tuned weights'. The final-test row is reported once, as is.")
+        else:
+            st.write("No weights qualified.")
+        for title, name, note in (
+                ("Does each rule beat buy-and-hold across stocks? (step 5)", "summary/bernoulli_by_rule.csv",
+                 "Each stock is one coin flip. p < 0.05: more stocks beat buy-and-hold than chance would give."),
+                ("Pass rule (steps 2, 3, 7) – number of stocks per verdict", "summary/pass_rule_counts.csv", ""),
+                ("Which null models fit (step 3)", "summary/bootstrap_models.csv", ""),
+                ("[LMW] information tests, all stocks pooled", "summary/lmw_9b_pooled.csv",
+                 "LMW found patterns far more informative on Nasdaq than on NYSE/AMEX."),
+                ("[LMW] head-to-head with the textbook items (final test)", "summary/lmw_head_to_head.csv",
+                 "An LMW item is kept only if it beats its textbook counterpart after costs."),
+                ("Rating variants A / B / C (final test, average per stock)", "summary/rating_variants_final_test.csv", ""),
+                ("Patterns on real vs random prices (step 4)", "summary/random_patterns_all_stocks.csv", ""),
+                ("Reality Check / SPA by stock (step 6)", "summary/reality_check_by_stock.csv", "")):
+            tb = load_table(name)
+            if tb is not None:
+                with st.expander(title, expanded=name.endswith("bernoulli_by_rule.csv")):
+                    st.dataframe(tb, hide_index=True)
+                    if note:
+                        st.caption(note)
+
+# =========================================================== WATCH LIST ====
+with tabs[7]:
     wl_text = st.text_area("Tickers (one per line or separated by commas)", "\n".join(load_watchlist()), height=130)
     tick = [t.strip().upper() for t in wl_text.replace(",", "\n").splitlines() if t.strip()]
     b1, b2 = st.columns(2)
@@ -473,7 +698,7 @@ with tabs[4]:
             st.caption("For fewer than 30 stocks the exact binomial probability is used instead of the z-score.")
 
 # ========================================================= OPTIONS DATA ====
-with tabs[5]:
+with tabs[9]:
     st.write("Framework 6 reads the mood of options traders and bets against extremes. The daily options summary "
              "lives in the repo's `options_data` folder and grows every trading "
              "evening: a GitHub Action copies the new day from your Watchtower repo.")
@@ -543,7 +768,7 @@ with tabs[5]:
                      hide_index=True)
 
 # ========================================================= DATA QUALITY ====
-with tabs[6]:
+with tabs[10]:
     q = res["quality"]
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Trading days", f"{q['n_days']:,}", f"{q['first']} to {q['last']}", delta_color="off")
@@ -560,7 +785,7 @@ with tabs[6]:
         st.download_button("Download cleaning log", log.to_csv(index=False).encode(), f"{res['ticker']}_cleaning_log.csv")
 
 # ============================================================= SETTINGS ====
-with tabs[7]:
+with tabs[11]:
     st.write("Starting values come from the framework. The books warn that tuning settings until the past looks "
              "good ('data snooping') makes results look better than they are, so change these sparingly.")
     with st.form("settings_form"):
@@ -572,6 +797,12 @@ with tabs[7]:
             ws = st.number_input("Sentiment weight", 0.0, 1.0, float(S["w_sentiment"]), 0.05)
             cut = st.number_input("Buy/Sell cut-off (±)", 0.05, 1.0, float(S["buy_cutoff"]), 0.05)
             conf = st.number_input("Days a new rating must hold", 1, 10, int(S["confirm_days"]))
+            from atrade.results import load_json as _lj
+            _tw = (_lj("tuned_weights.json") or {}).get("tuned")
+            tuned = st.checkbox("Use tuned weights from the research run", bool(S.get("use_tuned_weights")),
+                                disabled=not _tw, help=(f"Trend {_tw['w_trend']}, reversal {_tw['w_reversal']}, "
+                                                        f"sentiment {_tw['w_sentiment']}, cut-off {_tw['cutoff']}"
+                                                        if _tw else "No research run yet."))
             onlyp = st.checkbox("Use only rules that passed the back-test on this stock", bool(S["only_passed_rules"]),
                                 help="Framework 9's pass rule. Note: this uses the final-test results, so the rating's own back-test is no longer a clean test.")
         with a2:
@@ -599,7 +830,7 @@ with tabs[7]:
         saved = st.form_submit_button("Save and re-run", type="primary")
     if saved:
         S.update({"w_trend": wt, "w_reversal": wr, "w_sentiment": ws, "buy_cutoff": cut, "sell_cutoff": -cut,
-                  "confirm_days": int(conf), "only_passed_rules": onlyp, "filter_type": ftype, "filter_time_k": int(fk),
+                  "confirm_days": int(conf), "only_passed_rules": onlyp, "use_tuned_weights": bool(tuned), "filter_type": ftype, "filter_time_k": int(fk),
                   "filter_price_x": fx / 100, "live_days_indicator": int(live), "use_volume_weights": usev,
                   "zone_x": zx / 100, "zone_w": int(zw), "judge_period": int(jp), "cost_one_way": cost / 100,
                   "spread_one_way": spr / 100, "stop_loss": stop / 100, "history_years": int(yrs),
@@ -614,5 +845,5 @@ with tabs[7]:
         st.rerun()
 
 # ========================================================= HOW IT WORKS ====
-with tabs[8]:
+with tabs[12]:
     st.markdown(Path(__file__).with_name("HOW_IT_WORKS.md").read_text(encoding="utf-8"))

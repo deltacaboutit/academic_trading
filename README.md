@@ -38,7 +38,11 @@ A program that runs on your own Windows computer and opens in your web browser. 
 | Chart | Candles, the 50- and 200-day averages, support/resistance zones, chart patterns with their targets, GEX levels, volume (coloured by the volume check) and RSI. |
 | Signals | Every signal in a period, with the outcome of each pattern trade. You can download the list as a CSV file. |
 | Back-test | Each rule compared with buy-and-hold after costs, for training, validation and final-test periods. Also pattern outcomes (target hit / time limit / stopped out). |
+| Validation | Framework 9's full pass rule (steps 2, 3 and 7): which null models fit, the random-price test, patterns on random prices, the Reality Check / SPA, the accuracy of pattern price targets, and extra step-2 checks. **Run full validation** runs the random-price test for the stock on screen. |
+| LMW | The [LMW] patterns found, their information tests, shadow ratings B and C next to the official rating, and a head-to-head with the textbook patterns. |
+| Similarity | Past stretches shaped like the last two months, and what prices did next (Dynamic Time Warping). Context only. |
 | Watch list | Rate a whole list of stocks at once. Also shows a cross-stock test of each rule (Bernoulli test, Framework 9 step 5). |
+| All stocks | Results of the research run over every stock: cross-stock tests, pass-rule counts, LMW pooled tests (by exchange), rating variants, and the tuned rating weights. |
 | Options data | Which sentiment systems are active (and whether each uses real volume or the open-interest substitute), the state of the options data store, a button to get the latest data, and importing extra history files. |
 | Data quality | What the cleaning step found and changed. |
 | Settings | Weights, cut-offs, filters, costs and more. Values are saved in `data\settings.json`. |
@@ -130,7 +134,9 @@ also falls back to it if Yahoo can't be reached. **Refresh it rarely:** every fu
 and git keeps the old copies (about 100 MB each time). To fetch only tickers that are missing, run
 `python -m atrade.download_prices --missing-only`.
 
-## 4. What version 1 includes
+## 4. What the tool includes
+
+### Version 1
 
 | Framework | Included now |
 | --- | --- |
@@ -144,7 +150,33 @@ and git keeps the old copies (about 100 MB each time). To fetch only tickers tha
 | 8 Trade plan | Table 5.3 targets and time limits; stop after 2 closes back across the broken line or a 4% loss; entry at the next open; early close on an opposite signal. |
 | 9 Validation | 60/20/20 time split; one-sided Welch t-tests against buy-and-hold (buys, sells, buy-minus-sell); 0.05% commission plus 0.05% half-spread per trade; hit rates; pattern outcomes; the Bernoulli test across stocks. |
 
-**Planned for version 2:** the random-price bootstrap (AR(1) / GARCH-M / E-GARCH, with Ljung–Box and ARCH checks), counting patterns on random series, White's Reality Check or Hansen's SPA test, forecast-accuracy measures, all LMW items with the shadow ratings B and C, and the Dynamic Time Warping panel.
+### Version 2
+
+| Framework | Added |
+| --- | --- |
+| 9 step 2 | Jarque–Bera check of the bell-curve assumption, a one-sided Mann–Whitney test that does not need it, and the t-test repeated on simple returns. |
+| 9 step 3 | Random-price test: AR(1) (OLS), GARCH-M and E-GARCH (maximum likelihood, book eqs. 8.8–8.14); a model is used only if its key coefficients are significant and its leftover shocks pass the Ljung–Box and ARCH tests (20 lags, 10%); 500 artificial histories per model built from the stock's own resampled shocks; p-values for the mean and for volatility. A stock with no fitting model is "not testable". |
+| 9 step 4 | Every chart pattern counted on the real prices and on 10 random series with the same start, length, drift and volatility, with a test of whether price targets are hit more often on the real prices. |
+| 9 step 6 | White's Reality Check and Hansen's SPA test over all rules (stationary bootstrap). |
+| 9 step 8 | MSE, RMSE, MAE, MAPE, NRMSE, NPRMSE, Theil's U1 and U2, POCID, IPOCID, POS and the regression check for the pattern price targets. |
+| 9 pass rule | Steps 2, 3 and 7 together, in the final test. |
+| 7 tuning | Weights and cut-off searched on the training period of all stocks, checked once on validation, final test reported as-is; switch them on in Settings. |
+| 2 / 4e [LMW] | Kernel-regression turning points (38-day windows, 3-day lag), the ten LMW patterns, volume trend, information-only mode until the 9b tests give a direction. |
+| 9b [LMW] | Normalised returns, decile chi-square and Kolmogorov–Smirnov tests (pooled, by NYSE/AMEX and Nasdaq), head-to-head with the textbook items, shadow ratings B and C. |
+| 4d | Dynamic Time Warping similarity panel: Savitzky–Golay smoothing, derivative and subsequence DTW, threshold 15, 20-day skip, optional Sakoe–Chiba band. |
+
+### The research run (all stocks)
+
+On GitHub: **Actions → Research run (all stocks) → Run workflow**. It works in three stages:
+1. Sets the LMW smoothing width and directions using the training data only.
+2. Runs the per-stock tests in 20 parallel jobs.
+3. Combines the results and tunes the rating weights.
+
+It takes about 1–2 hours and commits everything to `results/`. To see the results in the app,
+press **Get the latest data from GitHub** on the Options data tab, then open the **All stocks** tab.
+For the NYSE/AMEX vs Nasdaq split, run `download_info_windows.bat` once first.
+
+On one computer: `python -m atrade.research all --tickers AAPL MSFT SPY --B 100`.
 
 ## 5. Choices made where the design leaves a gap
 
@@ -159,6 +191,15 @@ These are labelled "tool choice" in the code, so they are easy to find and chang
 7. **Stock implied volatility** is the plain average of the implied volatility of every option contract that traded that day.
 8. **Back-test returns** run from the next day's open to the close *h* days after the signal, and the buy-and-hold benchmark is measured the same way.
 9. **Triple tops/bottoms** require all three peaks (troughs) to be within 4% of each other. This combines the design's wording with the book's equation 5.17.
+10. **Null models "fit"** when their key coefficients are significant at 5%: ρ for AR(1); a1 and β for GARCH-M; G and A for E-GARCH. All t-statistics are shown.
+11. **Step 3 passes** only if the rule beats the random histories (p < 0.05) under *every* null model that fits. Its returns are close-to-close on both real and artificial prices, because artificial histories have no opening prices. Sentiment and GEX rules can't be simulated, so their verdict notes "step 3 not applicable".
+12. **LMW smoothing width.** The paper's cross-validation recipe doesn't produce a usable width on daily prices: the usual form picks almost none, and equation 13 as printed picks the widest allowed. The paper also doesn't publish the width it used. So the width is fixed so that patterns are found as often as LMW report (about 8.3 per stock-year), chosen on training data. It is 1.8 days by default.
+13. **LMW double tops/bottoms** use the first turning point in the window as E1. The volume trend uses volume, because shares outstanding barely change within 38 days, so they cancel out of the turnover ratio.
+14. **LMW directions.** A pattern gets a vote only if the pooled training-data tests find it informative; the vote follows the direction its returns lean. Until the research run has set them, HS/IHS/DTOP/DBOT use their usual directions in the shadow ratings and the rest are information-only. A directed pattern votes when the close breaks its outer boundary within 20 days.
+15. **DTW threshold.** The book's threshold of 15 comes from its S&P 500 example; real two-month queries often have no match that close. So the panel also lists the 10 closest non-overlapping matches, marked "closest".
+16. **Forecast accuracy** divides prices by the break-day close, so patterns from different stocks and years can be pooled.
+17. **Reality Check / SPA** use each rule's daily return over buy-and-hold (positions held for the judging period, costs on changes), close to close.
+18. **Weight tuning** maximises the average, across stocks, of each rating trade's return after costs minus buy-and-hold, on the training period. The weights step by 0.1 and the cut-off is chosen from 0.3, 0.4 and 0.5.
 
 ## 6. Checking the formulas
 
@@ -172,9 +213,12 @@ atrade/                    the analysis engine, one file per framework
   cleaning.py (F1)  turning_points.py (F2)  trend.py (F3)  zones.py, patterns.py, gauges.py (F4)
   volume.py (F5)    sentiment.py (F6)        rating.py (F7) trades.py (F8)  validation.py (F9)
   gex.py ([GEX] add-on)  options_store.py  watchtower.py (nightly sync)  release.py  import_history.py
-  data.py  config.py  analysis.py  demo.py  collect.py
+  bootstrap.py (F9 step 3)  lmw.py ([LMW])  similarity.py (F4d)  research.py (all-stock run)  results.py
+  data.py  config.py  analysis.py  demo.py  collect.py  download_prices.py
 options_data/              daily options summary + sync bookkeeping (full chains are on the Release; see section 3)
-.github/workflows/         options_sync.yml: the nightly copy from Watchtower
+.github/workflows/         options_sync.yml (nightly copy from Watchtower), options_import.yml, research.yml
+results/                   research results (bootstrap per stock, summaries, tuned weights)
+price_data/                25 years of daily prices per stock (test and validation data)
 tests/                     formula, look-ahead, data-store and GEX checks
 data/                      created on first run: saved prices and settings (not uploaded)
 ```

@@ -54,7 +54,7 @@ def load_prices(ticker: str, years: int, refresh: bool = False) -> tuple[pd.Data
             return df, f"Saved copy from {dt.date.fromtimestamp(path.stat().st_mtime)} (download failed: {e})"
         repo = repo_prices(ticker)
         if repo is not None:
-            return repo, f"price_data/ in the repo (to {repo.index[-1].date()}; Yahoo download failed: {e})"
+            return repo, f"price_data/ in the repo (to {repo.index[-1].date()}; Yahoo Finance could not be reached)"
         raise
 
 

@@ -35,7 +35,23 @@ def _dedupe(sigs):
     return sorted(seen.values(), key=lambda x: x.idx)
 
 
+def apply_tuned_weights(s: dict) -> dict:
+    """Framework 7: optionally replace the starting weights by the ones tuned on training data."""
+    if not s.get("use_tuned_weights"):
+        return s
+    from .results import load_json
+    t = (load_json("tuned_weights.json") or {}).get("tuned")
+    if not t:
+        return s
+    s = dict(s)
+    s.update({"w_trend": t["w_trend"], "w_reversal": t["w_reversal"], "w_sentiment": t["w_sentiment"],
+              "buy_cutoff": t["cutoff"], "sell_cutoff": -t["cutoff"]})
+    return s
+
+
 def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=None) -> dict:
+    s = apply_tuned_weights(s)
+
     def step(msg):
         if progress:
             progress(msg)
@@ -179,5 +195,5 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         "lmw_detections": lmw_det, "lmw_signals": sig_lmw, "lmw_settings": lset, "lmw_info": lmw_info,
         "rating_b": rating_b, "rating_c": rating_c, "variants": variants,
         "reality_check": rc, "forecast": {"Final test": fc, "Whole history": fc_all}, "robustness": robust,
-        "bootstrap": boot,
+        "bootstrap": boot, "settings_used": s,
     }
