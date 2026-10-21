@@ -234,6 +234,71 @@ def collect(tickers=None, session=None, force=False, store=None, chain_dir=None,
             "collected": len(have), "stocks": len(uni)}
 
 
+def fred_rates() -> pd.Series:
+    """The whole FRED 3-month T-bill series (decimal), indexed by date."""
+    import io
+
+    import requests
+    raw = pd.read_csv(io.StringIO(requests.get(FRED_URL, timeout=30).text))
+    raw.columns = ["date", "rate"]
+    raw["rate"] = pd.to_numeric(raw["rate"], errors="coerce") / 100
+    return raw.dropna().set_index(pd.to_datetime(raw.dropna()["date"]))["rate"]
+
+
+def recompute_walls(store=None, chain_dir=None, rates_file=None, log=print) -> int:
+    """Put the walls of every past summary day at strikes (README "GEX levels"), using the
+    stored chain of that stock and day. Flip and total GEX are left as they are."""
+    P = OS.paths(store)
+    try:
+        if rates_file:                                   # a saved DGS3MO series (columns date, rate)
+            rf = pd.read_parquet(rates_file) if str(rates_file).endswith(".parquet") else pd.read_csv(rates_file)
+            rates = rf.set_index(pd.to_datetime(rf["date"]))["rate"].astype(float).sort_index()
+        else:
+            rates = fred_rates()
+    except Exception as e:
+        log(f"FRED not reachable ({e}); using 4.5% for every day.")
+        rates = pd.Series(dtype=float)
+
+    def rate_on(d):
+        r = rates[rates.index <= pd.Timestamp(d)]
+        return float(r.iloc[-1]) if len(r) else DEFAULT_RATE
+
+    files = sorted(P["summary"].glob("*.parquet"))
+    summ = pd.concat([pd.read_parquet(f).assign(_file=f.name) for f in files], ignore_index=True)
+    for c in OS.SUMMARY_COLS:
+        if c not in summ:
+            summ[c] = np.nan
+    summ["date"] = pd.to_datetime(summ["date"]).dt.date
+    summ["wall_method"] = summ["wall_method"].astype(object)
+    todo = summ[summ["wall_method"].astype(str) != "strike"]
+    log(f"{len(todo):,} stock-days to recompute ({todo['ticker'].nunique()} stocks).")
+    cols = ["call_wall_price", "call_wall_gex", "put_wall_price", "put_wall_gex"]
+    done = 0
+    for i, (t, rows) in enumerate(todo.groupby("ticker")):
+        try:
+            ch = OS.read_chain(t, chain_dir=chain_dir)
+        except Exception as e:
+            log(f"  {t}: chain not available ({e})"); continue
+        ch["date"] = pd.to_datetime(ch["date"]).dt.date
+        by_day = dict(tuple(ch.groupby("date")))
+        for ix, row in rows.iterrows():
+            g = by_day.get(row["date"])
+            if g is None or not np.isfinite(row["spot"]):
+                continue
+            w = G.strike_walls(G._filtered(g), float(row["spot"]), rate_on(row["date"]))
+            for c in cols:
+                summ.at[ix, c] = w[c]
+            summ.at[ix, "wall_method"] = "strike"
+            done += 1
+        if (i + 1) % 50 == 0:
+            log(f"  {i + 1} stocks done")
+    for name, part in summ.groupby("_file"):
+        part = part.drop(columns="_file")[OS.SUMMARY_COLS].sort_values(["date", "ticker"]).reset_index(drop=True)
+        part.to_parquet(P["summary"] / name, index=False, compression="zstd")
+    log(f"Walls recomputed at strikes for {done:,} stock-days.")
+    return done
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tickers", nargs="*")
@@ -243,7 +308,13 @@ def main(argv=None):
     ap.add_argument("--min-share", type=float, default=0.95,
                     help="with --check-complete: fail unless this share of stocks has the session")
     ap.add_argument("--check-complete", action="store_true")
+    ap.add_argument("--recompute-walls", action="store_true",
+                    help="one-off: put the walls of all past summary days at strikes")
+    ap.add_argument("--rates-file", help="with --recompute-walls: saved FRED DGS3MO series instead of FRED")
     a = ap.parse_args(argv)
+    if a.recompute_walls:
+        recompute_walls(rates_file=a.rates_file)
+        return 0
     session = dt.date.fromisoformat(a.session) if a.session else session_day()
     uni = [t.upper() for t in (a.tickers or OS.universe())]
     if a.check and market_open_now():

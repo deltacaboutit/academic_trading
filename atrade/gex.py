@@ -19,6 +19,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+import pandas as pd
 
 from .signals import Signal
 
@@ -68,16 +69,29 @@ def levels(chain_one, spot, scale=None):
     return out
 
 
-# ------------------------------------------- daily levels (Watchtower method) ---
-# The daily collector stores GEX levels computed exactly as Watchtower did, so the
-# history that came from Watchtower and the days collected here form one series:
-#   GEX(S) = sum  sign * phi(d1)/(S iv sqrt T) * OI * 100 * S^2 * 0.01   (dollar gamma per 1% move)
-#   d1 includes the 3-month T-bill rate r. Contracts: expiries <= 90 days, OI >= 5.
-#   1. Coarse grid 0.5-1.5 x spot (100 points, r = 4.5%): rough walls and flip, used only to size step 2.
-#   2. Fine grid of 200 points from min(0.85 S, 0.95 put wall, 0.95 flip) to max(1.15 S, 1.05 call wall,
-#      1.05 flip), at the day's rate r. Flip = last STABLE sign change (both sides >= 5 grid points;
-#      otherwise the last sign change). Total GEX = profile value at spot.
-#   3. Call wall = grid price of the largest GEX above the flip; put wall = most negative below it.
+# ------------------------------------------------ daily levels (mixed method) ---
+# Stored every day in the options summary. Two kinds of level, each computed the way it
+# is normally defined (decided 2026-10-21, see README "GEX levels"):
+#
+#   WALLS - at STRIKES (the industry definition; SpotGamma: "the strike with the largest net
+#   call/put gamma"). For every contract at today's spot S:
+#       GEX = sign * phi(d1)/(S iv sqrt T) * OI * 100 * S^2 * 0.01      (dollar gamma per 1% move)
+#   summed per strike, calls and puts separately.
+#       Call wall = strike with the largest total call GEX.
+#       Put wall  = strike with the most negative total put GEX.
+#   Contracts: expiries <= 90 days, open interest >= 5. d1 includes the 3-month T-bill rate r.
+#
+#   FLIP and TOTAL GEX - from the PRICE PROFILE (Watchtower's method). The flip is where total
+#   GEX changes sign as the price moves, so it can only be found by re-pricing the whole chain
+#   at many hypothetical prices:
+#   1. Coarse grid 0.5-1.5 x spot (100 points, r = 4.5%): rough levels, used only to size step 2.
+#   2. Fine grid of 200 points from min(0.85 S, 0.95 coarse put level, 0.95 flip) to
+#      max(1.15 S, 1.05 coarse call level, 1.05 flip), at the day's rate r.
+#      Flip = last STABLE sign change (>= 5 grid points on each side; otherwise the last sign change).
+#      Total GEX = the profile's value at spot.
+#
+# Watchtower placed the walls on the profile too (highest point above the flip, lowest below it),
+# which gives prices between strikes (e.g. 334.95). Its flip and total GEX are kept as they were.
 
 def _profile(prices, K, T, iv, oi, is_call, r):
     S = np.asarray(prices, float)[:, None]
@@ -113,11 +127,37 @@ def find_flip(prices, gex, w=5):
     return prices[i] - gex[i] * (prices[i + 1] - prices[i]) / (gex[i + 1] - gex[i])
 
 
+def strike_walls(c, spot, r=0.045):
+    """Call and put walls at strikes (see the notes above). c: contracts already filtered."""
+    out = {"call_wall_price": np.nan, "call_wall_gex": np.nan, "put_wall_price": np.nan, "put_wall_gex": np.nan}
+    if c.empty:
+        return out
+    K, T, iv = c["strike"].to_numpy(float), c["T"].to_numpy(float), c["iv"].to_numpy(float)
+    isc = c["is_call"].to_numpy(bool)
+    S = float(spot)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        d1 = (np.log(S / K) + (r + 0.5 * iv ** 2) * T) / (iv * np.sqrt(T))
+        g = np.exp(-0.5 * d1 * d1) / math.sqrt(2 * math.pi) / (S * iv * np.sqrt(T))
+    gex = np.nan_to_num(g) * c["oi"].to_numpy(float) * 100 * S * S * 0.01 * np.where(isc, 1, -1)
+    by = pd.DataFrame({"strike": K, "call": isc, "gex": gex}).groupby(["call", "strike"])["gex"].sum()
+    if True in by.index.get_level_values(0):
+        cs = by.loc[True]
+        out["call_wall_price"], out["call_wall_gex"] = float(cs.idxmax()), float(cs.max())
+    if False in by.index.get_level_values(0):
+        ps = by.loc[False]
+        out["put_wall_price"], out["put_wall_gex"] = float(ps.idxmin()), float(ps.min())
+    return out
+
+
+def _filtered(chain_one):
+    return chain_one[(chain_one["oi"] >= 5) & chain_one["iv"].notna() & (chain_one["iv"] > 0) & (chain_one["T"] > 0)]
+
+
 def daily_levels(chain_one, spot, r=0.045):
-    """GEX levels for one stock on one day, Watchtower's method (see above)."""
+    """GEX levels for one stock on one day: walls at strikes, flip and total from the price profile."""
     out = {"gex_total": np.nan, "gex_flip": np.nan, "call_wall_price": np.nan, "call_wall_gex": np.nan,
-           "put_wall_price": np.nan, "put_wall_gex": np.nan}
-    c = chain_one[(chain_one["oi"] >= 5) & chain_one["iv"].notna() & (chain_one["T"] > 0)]
+           "put_wall_price": np.nan, "put_wall_gex": np.nan, "wall_method": "strike"}
+    c = _filtered(chain_one)
     if c.empty or not np.isfinite(spot) or spot <= 0:
         return out
     K, T, iv = c["strike"].to_numpy(float), c["T"].to_numpy(float), c["iv"].to_numpy(float)
@@ -132,14 +172,7 @@ def daily_levels(chain_one, spot, r=0.045):
     flip = find_flip(prices, g)
     out["gex_total"] = float(np.interp(spot, prices, g))
     out["gex_flip"] = float(flip) if flip is not None else np.nan
-    above = prices > flip if flip is not None and np.isfinite(flip) else g > 0
-    below = prices < flip if flip is not None and np.isfinite(flip) else g < 0
-    if above.any():
-        i = np.where(above)[0][np.argmax(g[above])]
-        out["call_wall_price"], out["call_wall_gex"] = float(prices[i]), float(g[i])
-    if below.any():
-        i = np.where(below)[0][np.argmin(g[below])]
-        out["put_wall_price"], out["put_wall_gex"] = float(prices[i]), float(g[i])
+    out.update(strike_walls(c, spot, r))
     return out
 
 

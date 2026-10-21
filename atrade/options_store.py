@@ -49,7 +49,7 @@ CHAIN_COLS = [f.name for f in CHAIN_SCHEMA]
 KEY = ["date", "expiry_str", "strike", "is_call"]
 SUMMARY_COLS = ["date", "ticker", "spot", "call_oi", "put_oi", "pc_oi", "call_volume", "put_volume", "pc_volume",
                 "avg_iv", "ivx_30d", "n_contracts", "gex_total", "gex_flip", "call_wall_price", "call_wall_gex",
-                "put_wall_price", "put_wall_gex", "gex_source", "source"]
+                "put_wall_price", "put_wall_gex", "wall_method", "gex_source", "source"]
 
 
 def paths(store: Path | None = None, chain_dir: Path | None = None):
@@ -215,6 +215,8 @@ def summarize(chain: pd.DataFrame, features: pd.DataFrame | None = None, gex_sca
                       "call_wall_price": f.get("call_wall"), "call_wall_gex": f.get("call_wall_gex"),
                       "put_wall_price": f.get("put_wall"), "put_wall_gex": f.get("put_wall_gex"),
                       "ivx_30d": f.get("ivx_30d"), "gex_source": "watchtower"})
+            # walls at strikes (README "GEX levels"); Watchtower's flip and total GEX are kept
+            r.update(G.strike_walls(G._filtered(g), r["spot"], rate)); r["wall_method"] = "strike"
         elif compute_gex and g["iv"].notna().any() and np.isfinite(spot):
             r.update(G.daily_levels(g, spot, rate)); r["gex_source"] = "computed"
         rows.append(r)

@@ -89,14 +89,15 @@ def test_collect_saves_chain_summary_and_skips_done(tmp_path, monkeypatch):
     assert CC.collect(["AAA", "BAD", "LATE"], SESSION, store=tmp_path, yf=yf2, log=log.append)["todo"] == 0
 
 
-def test_daily_levels_reproduce_watchtowers_walls():
-    """Grid walls and stable flip on a simple chain: calls above spot, puts below."""
+def test_walls_are_strikes_and_flip_from_the_profile():
+    """Walls sit on real strikes (largest call GEX / most negative put GEX); the flip lies between them."""
     K = np.r_[np.arange(80, 100, 5.0), np.arange(105, 125, 5.0)]
-    c = pd.DataFrame({"strike": K, "is_call": K > 100, "iv": 0.3, "oi": np.where(K == 110, 9000, 1000.0),
-                      "T": 20 / 365})
+    oi = np.where(K == 110, 9000, np.where(K == 90, 7000, 1000.0))
+    c = pd.DataFrame({"strike": K, "is_call": K > 100, "iv": 0.3, "oi": oi, "T": 20 / 365})
     lv = G.daily_levels(c, 100.0, 0.04)
-    assert lv["put_wall_price"] < lv["gex_flip"] < lv["call_wall_price"]
-    assert abs(lv["call_wall_price"] - 110) < 2                              # the big call strike
+    assert lv["call_wall_price"] == 110 and lv["put_wall_price"] == 90 and lv["wall_method"] == "strike"
+    assert lv["call_wall_gex"] > 0 > lv["put_wall_gex"]
+    assert 90 < lv["gex_flip"] < 110
 
 
 def test_no_collection_while_the_market_is_open():

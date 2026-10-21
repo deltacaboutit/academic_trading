@@ -253,7 +253,8 @@ with tabs[1]:
     show_bb = cc[4].checkbox("Bollinger", False)
     show_tp = cc[5].checkbox("Turning points", False)
     show_gex = cc[6].checkbox("GEX levels", res.get("gex") is not None, disabled=res.get("gex") is None,
-                              help="Gamma flip, call wall and put wall (add-on, not from the books).")
+                              help="Gamma flip, call wall and put wall (add-on, not from the books). Walls are the strikes with the "
+                                   "largest call / put gamma; the flip is where total gamma changes sign as the price moves.")
     days = {"6 months": 126, "1 year": 252, "2 years": 504, "5 years": 1260, "All": n}[span]
     a = max(0, n - days)
     x = df.index[a:]

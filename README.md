@@ -123,14 +123,7 @@ The inbox appears after the first nightly sync run. On your own computer, the sa
 
 - Watchtower's chains include **real volume from June 2, 2026**. Days before that (your older files) have **open interest only**. Where there isn't yet enough real-volume history, the stock-level systems use **put open interest ÷ call open interest** instead. The same applies to Squeeze Play I, which uses a market-wide ratio built from all the S&P 500 stocks. These versions are labelled **"open-interest substitute"**.
 - Once the real-volume version has enough history (60 days for Tsunami and Squeeze Play I, 110 for Squeeze Play II), it takes over the vote. The substitute keeps being back-tested alongside it, so you can compare the two.
-- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix. GEX levels are computed with Watchtower's method (`gex.daily_levels`):
-  - expiries up to 90 days and contracts with open interest of at least 5,
-  - dollar gamma per 1% move, on a 200-point price grid around the spot price, using the 3-month T-bill rate from FRED,
-  - the flip is the last *stable* sign change,
-  - the call wall is the strongest positive GEX above the flip, and the put wall the most negative below it.
-
-  On the days copied from Watchtower, this repo's calculation gives the same walls and a flip within about 0.1%. So the
-  copied days and the collected days form one series. Days before Watchtower come from `gex_history.csv`.
+- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix. GEX levels: see *How the GEX levels are calculated* below.
 
 ### GEX (gamma exposure) — an add-on, not from the books
 
@@ -144,6 +137,39 @@ Three GEX rules are **back-tested only and have no vote in the rating**, as your
 | [GEX] Flip cross | Buy when the close crosses above yesterday's flip; sell when it crosses below. |
 
 The rules use **yesterday's** levels, because today's levels are only known after today's close.
+
+#### How the GEX levels are calculated (mixed method, decided 2026-10-21)
+
+GEX (gamma exposure) estimates how much hedging options market makers must do as the price moves. It is calculated
+from every contract with an expiry up to 90 days out and open interest of at least 5:
+
+    GEX of a contract = gamma × open interest × 100 × price² × 0.01      (dollars of hedging per 1% move)
+
+Gamma comes from the Black-Scholes formula, using the contract's implied volatility and the 3-month T-bill rate from FRED.
+Calls count as positive and puts as negative, because market makers are assumed to own the calls and owe the puts.
+That assumption is the usual one, and it is also the main weakness of every GEX number.
+
+| Level | Method | Why |
+| --- | --- | --- |
+| **Call wall** | The **strike** whose calls have the largest total GEX at today's price. | The industry definition. SpotGamma: walls are "the strike with the largest net call / put gamma". A wall is where the open interest actually sits, and you can check it against the chain. |
+| **Put wall** | The **strike** whose puts have the most negative total GEX at today's price. | As above. |
+| **Gamma flip** | Re-price the whole chain at 200 hypothetical prices around today's price. The flip is where total GEX changes from positive to negative. If small wiggles cause several sign changes, the last *stable* one is used (at least 5 grid points on each side). | A flip is a price level, not a strike, so it can only be found this way. This is Watchtower's method, unchanged. |
+| **Total GEX** | The value of that price curve at today's price. | Watchtower's method, unchanged. |
+
+**What changed.** Watchtower also took the walls from the price curve: the curve's highest point above the flip and its
+lowest point below it. That gives levels between strikes (for example 334.95). It also nets calls against puts, and it
+blurs neighbouring strikes together.
+
+On 2026-10-21 the walls of all 80 past days (June 2 to Oct 19, 41,116 stock-days) were recalculated at strikes from the
+stored chains. The column `wall_method = "strike"` marks this. The flip and total GEX were left as they were.
+
+**What to expect.** Strike walls are often close to today's price, because gamma is largest for strikes near the
+current price. On the past days, about a quarter of call walls were below the price and a quarter of put walls were
+above it. The old walls almost never were, because they were forced to lie above or below the flip. A call wall below
+the price means the largest call position is already in the money, which is useful information in itself.
+
+The code is in `atrade/gex.py`: `daily_levels` for the levels and `strike_walls` for the walls. Recalculating every
+past day again is `python -m atrade.collect_chains --recompute-walls`.
 
 ## 3b. Price history for testing (`price_data/`)
 
