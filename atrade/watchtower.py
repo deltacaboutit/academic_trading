@@ -130,7 +130,8 @@ def sync(work: Path, store=None, chain_dir=None, labels: list[str] | None = None
     changed: set[str] = set()
     sessions = {}
     summ_all = OS.read_summary(store=store)
-    own = set(summ_all.loc[summ_all["source"] == "yahoo", "date"].dt.date) if len(summ_all) else set()
+    y = summ_all[summ_all["source"] == "yahoo"] if len(summ_all) else summ_all
+    own = set(zip(y["date"].dt.date, y["ticker"])) if len(y) else set()      # (day, stock) the collector has
     for i in range(0, len(todo), batch):
         chunk = todo[i:i + batch]
         checkout(work, chunk)
@@ -149,12 +150,18 @@ def sync(work: Path, store=None, chain_dir=None, labels: list[str] | None = None
                 log(f"  {L} -> trading day {session}: only {len(ch):,} contracts (below the {floor:,.0f} minimum) - "
                     f"PARTIAL RUN, skipped; this day stays missing until you import it")
                 continue
-            if session in own:
-                log(f"  {L} -> trading day {session}: SKIPPED, this repo's own collector already has that day")
-                continue
+            full_n = len(ch)                         # the whole run's size, before removing collected stocks
+            mine = {t for d, t in own if d == session}
+            if mine:
+                ch = ch[~ch["ticker"].isin(mine)]
+                feats = feats[~feats["ticker"].isin(mine)]
+                log(f"  {L} -> trading day {session}: {len(mine)} stocks already collected here, "
+                    f"copying only the other {ch['ticker'].nunique()}")
+                if ch.empty:
+                    continue
             prev = st["sessions"].get(str(session))
-            if prev and prev["label"] != L and prev["contracts"] > len(ch):
-                log(f"  {L} -> trading day {session}: {len(ch):,} contracts - SKIPPED, run {prev['label']} "
+            if prev and prev["label"] != L and prev["contracts"] > full_n:
+                log(f"  {L} -> trading day {session}: {full_n:,} contracts - SKIPPED, run {prev['label']} "
                     f"has more ({prev['contracts']:,})")
                 continue
             # a better run for a session already queued in this batch replaces it
@@ -164,7 +171,7 @@ def sync(work: Path, store=None, chain_dir=None, labels: list[str] | None = None
             for t, g in ch.groupby("ticker"):
                 per_stock[t].append(g)
             summ.append(OS.summarize(ch, feats))
-            st["sessions"][str(session)] = {"label": L, "contracts": len(ch)}
+            st["sessions"][str(session)] = {"label": L, "contracts": full_n}
             sessions[L] = session
             log(f"  {L} -> trading day {session}: {ch['ticker'].nunique()} stocks, {len(ch):,} contracts, "
                 f"{int(ch['iv_filled'].sum()):,} IVs filled")
