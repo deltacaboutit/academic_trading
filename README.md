@@ -200,6 +200,7 @@ These are labelled "tool choice" in the code, so they are easy to find and chang
 16. **Forecast accuracy** divides prices by the break-day close, so patterns from different stocks and years can be pooled.
 17. **Reality Check / SPA** use each rule's daily return over buy-and-hold (positions held for the judging period, costs on changes), close to close.
 18. **Weight tuning** maximises the average, across stocks, of each rating trade's return after costs minus buy-and-hold, on the training period. The weights step by 0.1 and the cut-off is chosen from 0.3, 0.4 and 0.5.
+19. **Broken artificial histories are redrawn.** For a stock with a huge one-day crash and very persistent volatility (for example FISV under GARCH-M), an artificial history can occasionally spiral until its price reaches zero or infinity. That history is thrown away and a new one drawn, and the count is shown on the Validation tab. The research run uses only `price_data/` (including `^VIX`), and a stock that still fails is listed under "Stocks that failed" rather than stopping its batch.
 
 ## 6. Checking the formulas
 

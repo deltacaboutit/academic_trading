@@ -142,13 +142,24 @@ def stock_job(ticker: str, B: int, s: dict = DEFAULTS) -> str:
     return f"{ticker}: done in {time.time() - t0:.0f}s"
 
 
+def safe_stock_job(ticker: str, B: int) -> str:
+    """stock_job, but a failure on one stock is written to work/errors/ and the run carries on."""
+    import traceback
+    try:
+        return stock_job(ticker, B)
+    except Exception as e:
+        d = WORK / "errors"; d.mkdir(parents=True, exist_ok=True)
+        (d / f"{ticker.replace('^', '_')}.txt").write_text(traceback.format_exc())
+        return f"{ticker}: FAILED ({type(e).__name__}: {e}) - skipped, details in work/errors/"
+
+
 def run_stocks(tickers: list[str], B: int, workers: int, log=print):
     if workers <= 1:
         for t in tickers:
-            log(stock_job(t, B))
+            log(safe_stock_job(t, B))
         return
     with ProcessPoolExecutor(workers) as pool:
-        for msg in pool.map(stock_job, tickers, itertools.repeat(B)):
+        for msg in pool.map(safe_stock_job, tickers, itertools.repeat(B)):
             log(msg)
 
 
@@ -256,6 +267,12 @@ def combine(s: dict = DEFAULTS, log=print):
     from .results import load_bootstrap
     from .validation import full_pass_table
     work = WORK / "stocks"
+    errs = sorted((WORK / "errors").glob("*.txt")) if (WORK / "errors").exists() else []
+    save_table(pd.DataFrame([{"ticker": f.stem.replace("_", "^", 1) if f.stem.startswith("_") else f.stem,
+                              "error": f.read_text().strip().splitlines()[-1]} for f in errs],
+                            columns=["ticker", "error"]), "summary/failed_stocks.csv")
+    if errs:
+        log(f"{len(errs)} stock(s) failed and were left out: {', '.join(f.stem for f in errs)}")
     rules = pd.concat([pd.read_csv(f) for f in sorted(work.glob("*_rules.csv"))], ignore_index=True)
     groups = exchange_groups()
     save_table(bernoulli_tables(rules, groups), "summary/bernoulli_by_rule.csv")
@@ -272,7 +289,8 @@ def combine(s: dict = DEFAULTS, log=print):
     for f in sorted((RESULTS / "bootstrap").glob("*.json")):
         d = json.loads(f.read_text())
         bt.append({"ticker": d["ticker"], "testable": d["testable"],
-                   **{f"{x['model']}_qualified": x["qualified"] for x in d["fits"]}})
+                   **{f"{x['model']}_qualified": x["qualified"] for x in d["fits"]},
+                   **{f"{x['model']}_redrawn": x.get("paths_redrawn") for x in d["fits"] if x["qualified"]}})
     if bt:
         save_table(pd.DataFrame(bt), "summary/bootstrap_models.csv")
     # LMW 9b pooled, final test, by exchange group
@@ -335,6 +353,8 @@ def main(argv=None):
     ap.add_argument("--B", type=int, default=500)
     ap.add_argument("--workers", type=int, default=1)
     a = ap.parse_args(argv)
+    import os
+    os.environ["ATRADE_OFFLINE"] = "1"          # use price_data/ (incl. ^VIX) only: same data on every run
     tickers = [t.upper() for t in a.tickers] if a.tickers else universe()
     if a.stage in ("calibrate", "all"):
         calibrate(tickers)

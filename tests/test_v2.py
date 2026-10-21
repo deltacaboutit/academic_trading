@@ -187,3 +187,23 @@ def test_tuned_weights_switch():
     from atrade.analysis import apply_tuned_weights
     s = dict(S); s["use_tuned_weights"] = False
     assert apply_tuned_weights(s)["w_trend"] == S["w_trend"]
+
+
+def test_broken_artificial_histories_are_redrawn():
+    class Exploding(BS.AR1):
+        def __init__(self):
+            self.resid = np.array([-1.0, 1.0]); self.calls = 0
+        def simulate(self, z):
+            self.calls += 1
+            return np.full(len(z) + 1, -1e6 if self.calls % 3 == 1 else 0.1)   # every 3rd path collapses
+    st = {}
+    out = list(BS.simulate_prices(Exploding(), np.full(50, 10.0), 6, stats=st))
+    assert len(out) == 6 and all(np.isfinite(x).all() and (x > 0).all() for x in out)
+    assert st["redrawn"] == 3
+
+
+def test_close_returns_skips_bad_prices():
+    px = np.array([10.0, 11, 0.0, 12, 13, 14])
+    rows = BS.close_returns([Signal("x", "trend", "crossover", 1, 0), Signal("x", "trend", "crossover", 1, 1)],
+                            px, 1, 0.0)
+    assert [r[0] for r in rows] == [0]

@@ -262,18 +262,36 @@ def fit_models(close: np.ndarray) -> list[dict]:
     return out
 
 
-def simulate_prices(model, close: np.ndarray, B: int, seed: int = 0):
-    """B artificial price histories with the same start price and length as the real one."""
+def simulate_prices(model, close: np.ndarray, B: int, seed: int = 0, stats: dict | None = None):
+    """B artificial price histories with the same start price and length as the real one.
+
+    A history whose price reaches zero or infinity is thrown away and drawn again (tool choice).
+    This happens when a GARCH model with very persistent volatility keeps drawing the stock's
+    worst real shocks: volatility then spirals until the numbers leave the computer's range.
+    Such a path is a numerical breakdown, not a price history. The count is put in stats["redrawn"].
+    """
     rng = np.random.default_rng(seed)
     resid = model.resid[np.isfinite(model.resid)]
     n = len(close) - 1
-    for _ in range(B):
+    made = redrawn = 0
+    while made < B:
+        if redrawn > B:                     # model is unusable; stop rather than loop for ever
+            break
         z = rng.choice(resid, size=n if not isinstance(model, AR1) else n - 1, replace=True)
         r = model.simulate(z)
         if isinstance(model, AR1):
             r = r if len(r) == n else r[:n]
         lp = np.log(close[0]) + np.concatenate([[0.0], np.cumsum(r[:n] / 100.0)])
-        yield np.exp(lp)
+        with np.errstate(over="ignore", under="ignore"):
+            px = np.exp(lp)
+        if not (np.isfinite(px).all() and (px > 0).all()):
+            redrawn += 1
+            continue
+        made += 1
+        yield px
+    if stats is not None:
+        stats["redrawn"] = redrawn
+        stats["made"] = made
 
 
 # ------------------------------------------------------- rules on closes ----
@@ -313,7 +331,10 @@ def close_returns(sigs, close, h, cost_rt):
             if u.idx > t and u.direction != d:
                 exit_t = u.idx
                 break
-        rows.append((t, d, d * math.log(close[exit_t] / close[t]) - cost_rt))
+        a, b = close[t], close[exit_t]
+        if not (a > 0 and b > 0 and math.isfinite(a) and math.isfinite(b)):
+            continue                        # no valid price on entry or exit day
+        rows.append((t, d, d * math.log(b / a) - cost_rt))
     return rows
 
 
@@ -342,7 +363,8 @@ def run(close: np.ndarray, s: dict, B: int = 500, holding=None, seed: int = 0, p
     qualified = [f for f in fits if f["qualified"]]
     for f in qualified:
         sims = defaultdict(list)
-        for i, px in enumerate(simulate_prices(f["obj"], close, B, seed)):
+        st = {}
+        for i, px in enumerate(simulate_prices(f["obj"], close, B, seed, st)):
             rules = price_rules(px, s)
             for rule in real_rules:
                 for h in holding:
@@ -351,6 +373,7 @@ def run(close: np.ndarray, s: dict, B: int = 500, holding=None, seed: int = 0, p
                         sims[(rule, h, bn)].append(block_stats(rr, a, b))
             if progress:
                 progress(f["model"], i + 1, B)
+        f["paths_redrawn"] = st.get("redrawn", 0)
         for key, real_st in real.items():
             sim = sims[key]
             means = np.array([x["mean"] for x in sim], float)
@@ -365,6 +388,8 @@ def run(close: np.ndarray, s: dict, B: int = 500, holding=None, seed: int = 0, p
                          if np.isfinite(real_st["buy_sd"]) and np.isfinite(bsd).any() else np.nan,
                          "B": int(ok.sum())})
     fit_table = pd.DataFrame([{k: v for k, v in f.items() if k != "obj"} for f in fits])
+    if "paths_redrawn" not in fit_table:
+        fit_table["paths_redrawn"] = np.nan
     return {"fits": fit_table, "results": pd.DataFrame(rows), "testable": bool(qualified), "B": B,
             "rules": sorted(real_rules)}
 

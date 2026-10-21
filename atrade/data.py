@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 import io
 import time
 
@@ -39,6 +40,11 @@ def load_prices(ticker: str, years: int, refresh: bool = False) -> tuple[pd.Data
     if ticker == "DEMO":
         from .demo import demo_prices
         return demo_prices(), "Built-in demo data (simulated prices, not a real stock)"
+    if os.environ.get("ATRADE_OFFLINE"):          # research run: use price_data/ only, no downloads
+        repo = repo_prices(ticker)
+        if repo is not None:
+            return repo, f"price_data/ in the repo (to {repo.index[-1].date()})"
+        raise ValueError(f"{ticker} is not in price_data/.")
     path = CACHE_DIR / f"{ticker.replace('^', '_')}.csv"
     fresh = path.exists() and dt.date.fromtimestamp(path.stat().st_mtime) == dt.date.today()
     if fresh and not refresh:

@@ -442,7 +442,11 @@ with tabs[4]:
             "Model": fits["model"], "Used": fits["qualified"].map({True: "yes", False: "no"}),
             "Leftover correlation (Ljung-Box p)": fits.get("ljung_box_p", pd.Series()).map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"),
             "Leftover volatility clustering (ARCH p)": fits.get("arch_p", pd.Series()).map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"),
+            "Broken histories redrawn": fits.get("paths_redrawn", pd.Series(index=fits.index, dtype=float)).map(
+                lambda v: "–" if pd.isna(v) else f"{int(v)}"),
             "Why": fits["reason"]}), hide_index=True)
+        st.caption("'Broken histories redrawn': artificial histories whose volatility spiralled until the price hit "
+                   "zero or infinity. They were thrown away and drawn again.")
         br = boot["results"]
         if len(br):
             br = br[(br["block"] == "Final test") & (br["h"] == int(S["judge_period"]))]
@@ -634,9 +638,11 @@ with tabs[8]:
                  "An LMW item is kept only if it beats its textbook counterpart after costs."),
                 ("Rating variants A / B / C (final test, average per stock)", "summary/rating_variants_final_test.csv", ""),
                 ("Patterns on real vs random prices (step 4)", "summary/random_patterns_all_stocks.csv", ""),
-                ("Reality Check / SPA by stock (step 6)", "summary/reality_check_by_stock.csv", "")):
+                ("Reality Check / SPA by stock (step 6)", "summary/reality_check_by_stock.csv", ""),
+                ("Stocks that failed and were left out", "summary/failed_stocks.csv",
+                 "Details are in the GitHub Actions log for the research run.")):
             tb = load_table(name)
-            if tb is not None:
+            if tb is not None and len(tb):
                 with st.expander(title, expanded=name.endswith("bernoulli_by_rule.csv")):
                     st.dataframe(tb, hide_index=True)
                     if note:
