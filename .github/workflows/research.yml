@@ -37,7 +37,11 @@ jobs:
       - id: m
         run: python -c "import json; n=int('${{ inputs.shards }}'); print('shards=' + json.dumps(list(range(n))))" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        with: { name: lmw-settings, path: results/ }
+        with:
+          name: lmw-settings
+          path: |
+            results/lmw_settings.json
+            results/summary/lmw_9b_training.csv
 
   stocks:
     needs: calibrate
@@ -53,6 +57,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip, cache-dependency-path: requirements.txt }
       - run: pip install -r requirements.txt
+      - name: Start from an empty results folder (only this run's files are uploaded)
+        run: rm -rf results work
       - uses: actions/download-artifact@v4
         with: { name: lmw-settings, path: results/ }
       - name: Per-stock work
@@ -67,7 +73,8 @@ jobs:
 
   combine:
     needs: stocks
-    if: always()
+    # runs if some batches failed (their stocks are listed as failed), but NOT if the run was cancelled
+    if: ${{ !cancelled() && needs.stocks.result != 'skipped' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -75,6 +82,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip, cache-dependency-path: requirements.txt }
       - run: pip install -r requirements.txt
+      - name: Start from an empty results folder (this run replaces the previous one completely)
+        run: rm -rf results work
       - uses: actions/download-artifact@v4
         with: { name: lmw-settings, path: results/ }
       - uses: actions/download-artifact@v4
@@ -86,13 +95,17 @@ jobs:
           ls work/stocks | wc -l
       - name: Pooled tests and weight tuning
         run: python -m atrade.research combine
-      - name: Commit results
+      - name: Commit results (replacing the previous run's results)
         run: |
           git config user.name  "research-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add results
-          if git diff --cached --quiet; then echo "Nothing new."; else
-            git commit -m "Research results $(date +%F) (B=${{ inputs.B }})"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset -q --mixed origin/main      # newest main; this run's files stay in the folder
+            git add -A results                    # adds new files and removes old ones
+            if git diff --cached --quiet; then echo "Nothing new."; exit 0; fi
+            git commit -q -m "Research results $(date +%F) (B=${{ inputs.B }})"
+            if git push origin HEAD:main; then exit 0; fi
+            echo "main moved while saving; trying again"
+          done
+          exit 1
