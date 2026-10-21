@@ -192,6 +192,9 @@ def collect(tickers=None, session=None, force=False, store=None, chain_dir=None,
         return len(ch)
 
     for i, t in enumerate(todo):
+        if yf is None and market_open_now():
+            log(f"The market opened; stopping. {len(todo) - i} stocks are left for the evening run.")
+            break
         raw, err = fetch_with_retries(t, session, yf, sleep=sleep)
         if raw is None:
             failed[t] = err
@@ -202,7 +205,7 @@ def collect(tickers=None, session=None, force=False, store=None, chain_dir=None,
             sleep(pause)
         if summ and len(summ) % 50 == 0:                    # save progress in case the job is stopped
             OS.upsert_summary(pd.concat(summ, ignore_index=True), store); summ = []
-    if failed:                                              # one more pass for stocks that failed
+    if failed and not (yf is None and market_open_now()):    # one more pass for stocks that failed
         log(f"Second try for {len(failed)} stocks after a 60-second pause ...")
         sleep(60)
         for t in list(failed):
