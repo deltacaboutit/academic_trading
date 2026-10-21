@@ -129,6 +129,8 @@ def sync(work: Path, store=None, chain_dir=None, labels: list[str] | None = None
     log(f"Watchtower {head[:8]}: {len(have)} days available, {len(todo)} new or changed.")
     changed: set[str] = set()
     sessions = {}
+    summ_all = OS.read_summary(store=store)
+    own = set(summ_all.loc[summ_all["source"] == "yahoo", "date"].dt.date) if len(summ_all) else set()
     for i in range(0, len(todo), batch):
         chunk = todo[i:i + batch]
         checkout(work, chunk)
@@ -146,6 +148,9 @@ def sync(work: Path, store=None, chain_dir=None, labels: list[str] | None = None
                 st["labels"][L]["partial"] = True
                 log(f"  {L} -> trading day {session}: only {len(ch):,} contracts (below the {floor:,.0f} minimum) - "
                     f"PARTIAL RUN, skipped; this day stays missing until you import it")
+                continue
+            if session in own:
+                log(f"  {L} -> trading day {session}: SKIPPED, this repo's own collector already has that day")
                 continue
             prev = st["sessions"].get(str(session))
             if prev and prev["label"] != L and prev["contracts"] > len(ch):

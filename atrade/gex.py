@@ -68,6 +68,81 @@ def levels(chain_one, spot, scale=None):
     return out
 
 
+# ------------------------------------------- daily levels (Watchtower method) ---
+# The daily collector stores GEX levels computed exactly as Watchtower did, so the
+# history that came from Watchtower and the days collected here form one series:
+#   GEX(S) = sum  sign * phi(d1)/(S iv sqrt T) * OI * 100 * S^2 * 0.01   (dollar gamma per 1% move)
+#   d1 includes the 3-month T-bill rate r. Contracts: expiries <= 90 days, OI >= 5.
+#   1. Coarse grid 0.5-1.5 x spot (100 points, r = 4.5%): rough walls and flip, used only to size step 2.
+#   2. Fine grid of 200 points from min(0.85 S, 0.95 put wall, 0.95 flip) to max(1.15 S, 1.05 call wall,
+#      1.05 flip), at the day's rate r. Flip = last STABLE sign change (both sides >= 5 grid points;
+#      otherwise the last sign change). Total GEX = profile value at spot.
+#   3. Call wall = grid price of the largest GEX above the flip; put wall = most negative below it.
+
+def _profile(prices, K, T, iv, oi, is_call, r):
+    S = np.asarray(prices, float)[:, None]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        d1 = (np.log(S / K) + (r + 0.5 * iv ** 2) * T) / (iv * np.sqrt(T))
+        g = np.exp(-0.5 * d1 * d1) / math.sqrt(2 * math.pi) / (S * iv * np.sqrt(T))
+    return np.sum(np.nan_to_num(g) * oi * 100 * S ** 2 * 0.01 * np.where(is_call, 1, -1), axis=1)
+
+
+def _flip_simple(prices, gex):
+    sc = np.where(np.diff(np.sign(gex)))[0]
+    if not len(sc):
+        return None
+    i = int(sc.max())
+    return prices[i] - gex[i] * (prices[i + 1] - prices[i]) / (gex[i + 1] - gex[i])
+
+
+def find_flip(prices, gex, w=5):
+    s = np.sign(gex).astype(int)
+    for i in range(1, len(s)):
+        if s[i] == 0:
+            s[i] = s[i - 1]
+    for i in range(len(s) - 2, -1, -1):
+        if s[i] == 0:
+            s[i] = s[i + 1]
+    starts = np.r_[0, np.flatnonzero(s[1:] != s[:-1]) + 1]
+    ends = np.r_[starts[1:], len(s)]
+    lens = ends - starts; signs = s[starts]
+    ok = (signs[1:] * signs[:-1] == -1) & (lens[:-1] >= w) & (lens[1:] >= w)
+    if not ok.any():
+        return _flip_simple(prices, gex)
+    i = starts[np.where(ok)[0][-1] + 1] - 1
+    return prices[i] - gex[i] * (prices[i + 1] - prices[i]) / (gex[i + 1] - gex[i])
+
+
+def daily_levels(chain_one, spot, r=0.045):
+    """GEX levels for one stock on one day, Watchtower's method (see above)."""
+    out = {"gex_total": np.nan, "gex_flip": np.nan, "call_wall_price": np.nan, "call_wall_gex": np.nan,
+           "put_wall_price": np.nan, "put_wall_gex": np.nan}
+    c = chain_one[(chain_one["oi"] >= 5) & chain_one["iv"].notna() & (chain_one["T"] > 0)]
+    if c.empty or not np.isfinite(spot) or spot <= 0:
+        return out
+    K, T, iv = c["strike"].to_numpy(float), c["T"].to_numpy(float), c["iv"].to_numpy(float)
+    oi, isc = c["oi"].to_numpy(float), c["is_call"].to_numpy(bool)
+    coarse = np.linspace(spot * 0.5, spot * 1.5, 100)
+    gc = _profile(coarse, K, T, iv, oi, isc, 0.045)
+    cwp, pwp = int(coarse[np.argmax(gc)]), int(coarse[np.argmin(gc)])
+    fl = find_flip(coarse, gc)
+    fl_ = fl if fl is not None else spot
+    prices = np.linspace(min(spot * 0.85, pwp * 0.95, fl_ * 0.95), max(spot * 1.15, cwp * 1.05, fl_ * 1.05), 200)
+    g = _profile(prices, K, T, iv, oi, isc, r)
+    flip = find_flip(prices, g)
+    out["gex_total"] = float(np.interp(spot, prices, g))
+    out["gex_flip"] = float(flip) if flip is not None else np.nan
+    above = prices > flip if flip is not None and np.isfinite(flip) else g > 0
+    below = prices < flip if flip is not None and np.isfinite(flip) else g < 0
+    if above.any():
+        i = np.where(above)[0][np.argmax(g[above])]
+        out["call_wall_price"], out["call_wall_gex"] = float(prices[i]), float(g[i])
+    if below.any():
+        i = np.where(below)[0][np.argmin(g[below])]
+        out["put_wall_price"], out["put_wall_gex"] = float(prices[i]), float(g[i])
+    return out
+
+
 # ------------------------------------------------------------- signals -----
 
 def gex_signals(df, lv: dict) -> list[Signal]:

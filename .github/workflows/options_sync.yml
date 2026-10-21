@@ -1,4 +1,8 @@
-name: Options data sync
+name: Watchtower backup sync (temporary)
+
+# TEMPORARY: the 'Options data collection' workflow now collects the chains itself.
+# Until Watchtower is retired this copies only days the collector has NOT collected
+# (a backup for the first days). Delete this file when Watchtower is taken down.
 
 # Copies each new day from the Watchtower repo (which collects the Yahoo
 # option chains every evening) into this repo:
@@ -18,7 +22,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: options-sync
+  group: options-data         # one options workflow at a time
   cancel-in-progress: false
 
 jobs:

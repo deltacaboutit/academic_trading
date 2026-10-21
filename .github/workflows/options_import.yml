@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: options-sync          # never at the same time as the nightly sync
+  group: options-data         # one options workflow at a time
   cancel-in-progress: false
 
 jobs:

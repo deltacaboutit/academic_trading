@@ -707,7 +707,7 @@ with tabs[7]:
 with tabs[9]:
     st.write("Framework 6 reads the mood of options traders and bets against extremes. The daily options summary "
              "lives in the repo's `options_data` folder and grows every trading "
-             "evening: a GitHub Action copies the new day from your Watchtower repo.")
+             "evening: a GitHub Action downloads every stock's option chain from Yahoo Finance after the close.")
     stt = pd.DataFrame(res["sentiment_status"])
     if "votes" not in stt:
         stt["votes"] = stt["active"]
@@ -727,7 +727,7 @@ with tabs[9]:
             if stx["summary_days"]:
                 st.write(f"**{stx['summary_days']}** trading days ({stx['summary_first']} to {stx['summary_last']}) for "
                          f"**{stx['tickers']}** tickers. Real volume on **{stx['volume_days']}** days. "
-                         f"Last sync from Watchtower: {stx['last_sync'] or 'not yet'}.")
+                         f"Latest collection: {stx['last_collect'] or 'not yet'}.")
                 st.caption(f"Full contract-level chains: one file per stock, kept on the "
                            f"[options-data Release]({stx['release']}). The tool downloads a stock's file when needed.")
             else:

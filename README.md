@@ -51,17 +51,34 @@ A program that runs on your own Windows computer and opens in your web browser. 
 
 ### Where the data comes from
 
-Your **Watchtower** repo collects the Yahoo Finance option chain of every S&P 500 stock (plus SPY, QQQ and IWM)
-each evening. The **Options data sync** GitHub Action in this repo copies each new Watchtower day across.
-It runs at 11:15 pm and 7:15 am New York time and only processes days it hasn't seen.
+The **Options data collection** GitHub Action (`options_collect.yml`) downloads the Yahoo Finance option chain of every
+stock in `options_data/universe.txt` (the S&P 500 plus SPY, QQQ and IWM) after each trading day's close. It collects
+what Watchtower collected, in the same way:
+- every expiry up to 90 days out,
+- every call and put with open interest of at least 5,
+- the strike, implied volatility, open interest, volume, bid, ask, last price and the day's closing price.
+
+**When it runs.** The main run is at about 4:45 pm New York time. Catch-up runs follow at about 9:30 pm and 7:15 am the
+next morning. Each run only fetches stocks that don't have the day yet, so after a good main run the catch-ups finish in
+a minute. A stock that fails is retried three times, then once more at the end of the run, and then by the catch-ups.
+Only the 7:15 am run shows a red X, and only if fewer than 95% of stocks still have the day. The file
+`options_data/collect_state.json` lists each day's count and any stocks that failed.
+
+It never collects between 9:25 am and 4:15 pm on a trading day, because Yahoo's chains then show the live,
+unfinished day. **Run it by hand:** Actions → *Options data collection* → *Run workflow*. You can give a few tickers, and choose
+*force* to collect them again.
+
+Days up to Oct 19, 2026 were copied from your Watchtower repo. The **Watchtower backup sync (temporary)** workflow
+still copies any day the collector missed completely, and never touches a day the collector has. Delete
+`options_sync.yml` when Watchtower is taken down.
 
 ### Where it is stored
 
 | What | Where | Contents |
 | --- | --- | --- |
 | **Full chain, one file per stock** | `SPY.parquet`, `AAPL.parquet`, … on the GitHub Release **[options-data](https://github.com/deltacaboutit/academic_trading/releases/tag/options-data)**, grouped into 27 zip bundles by first letter (`chains_A.zip` …) because GitHub allows a workflow only 1,000 requests an hour. | Every contract on every day, appended: date, ticker, spot, expiry_str, strike, is_call, iv, iv_filled, oi, volume, T, bid, ask, last_price, source. |
-| **Daily summary** | `options_data/summary/2026-10.parquet`, … (in git, one small file per month) | One row per stock per day: spot, put and call open interest and volume, put/call ratios from both, average IV, Watchtower's 30-day IV, total GEX, gamma flip, call wall and put wall. |
-| Sync bookkeeping | `options_data/watchtower_state.json`, `universe.txt` | Which Watchtower days are done and how each was dated. |
+| **Daily summary** | `options_data/summary/2026-10.parquet`, … (in git, one small file per month) | One row per stock per day: spot, put and call open interest and volume, put/call ratios from both, average IV, Watchtower's 30-day IV (Watchtower days only), total GEX, gamma flip, call wall and put wall. |
+| Bookkeeping | `options_data/collect_state.json`, `universe.txt`, `rate.json`, `watchtower_state.json` | Each collected day's count and failures, the stock list, the latest 3-month T-bill rate, and which Watchtower days were copied. |
 
 **Why a Release and not the repo itself?** Git keeps a full copy of every version of every file. One file per stock
 rewritten every evening would add the whole data set to the repo again each day, and it would hit GitHub's limits within
@@ -69,6 +86,10 @@ weeks. A Release asset is simply replaced, so storage stays at the real data siz
 In Python, `atrade.options_store.read_chain("AAPL")` returns a stock's full chain and downloads the file if needed.
 
 ### Fixes applied on the way in
+
+The collector dates each day by the NYSE session whose close has passed. It measures time to expiry from that
+session's 4:00 pm close, so the result doesn't depend on when the run happens. Fixes 1 and 2 below were for the
+days copied from Watchtower; fix 3 applies to every day.
 
 1. **Real trading day.** Watchtower names each file after the UTC date when its run *started*. So a run that starts
    after 8 pm New York time, or a weekend re-run, carries the next day's date. The sync dates each run by the New York
@@ -102,7 +123,14 @@ The inbox appears after the first nightly sync run. On your own computer, the sa
 
 - Watchtower's chains include **real volume from June 2, 2026**. Days before that (your older files) have **open interest only**. Where there isn't yet enough real-volume history, the stock-level systems use **put open interest ÷ call open interest** instead. The same applies to Squeeze Play I, which uses a market-wide ratio built from all the S&P 500 stocks. These versions are labelled **"open-interest substitute"**.
 - Once the real-volume version has enough history (60 days for Tsunami and Squeeze Play I, 110 for Squeeze Play II), it takes over the vote. The substitute keeps being back-tested alongside it, so you can compare the two.
-- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix. GEX levels come from Watchtower's own gamma engine, or from `gex_history.csv` for older days.
+- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix. GEX levels are computed with Watchtower's method (`gex.daily_levels`):
+  - expiries up to 90 days and contracts with open interest of at least 5,
+  - dollar gamma per 1% move, on a 200-point price grid around the spot price, using the 3-month T-bill rate from FRED,
+  - the flip is the last *stable* sign change,
+  - the call wall is the strongest positive GEX above the flip, and the put wall the most negative below it.
+
+  On the days copied from Watchtower, this repo's calculation gives the same walls and a flip within about 0.1%. So the
+  copied days and the collected days form one series. Days before Watchtower come from `gex_history.csv`.
 
 ### GEX (gamma exposure) — an add-on, not from the books
 
@@ -213,11 +241,11 @@ app.py                     the browser app
 atrade/                    the analysis engine, one file per framework
   cleaning.py (F1)  turning_points.py (F2)  trend.py (F3)  zones.py, patterns.py, gauges.py (F4)
   volume.py (F5)    sentiment.py (F6)        rating.py (F7) trades.py (F8)  validation.py (F9)
-  gex.py ([GEX] add-on)  options_store.py  watchtower.py (nightly sync)  release.py  import_history.py
+  gex.py ([GEX] add-on)  options_store.py  collect_chains.py (daily collection)  watchtower.py (temporary backup sync)  release.py  import_history.py
   bootstrap.py (F9 step 3)  lmw.py ([LMW])  similarity.py (F4d)  research.py (all-stock run)  results.py
   data.py  config.py  analysis.py  demo.py  collect.py  download_prices.py
 options_data/              daily options summary + sync bookkeeping (full chains are on the Release; see section 3)
-.github/workflows/         options_sync.yml (nightly copy from Watchtower), options_import.yml, research.yml
+.github/workflows/         options_collect.yml (daily collection), options_sync.yml (temporary Watchtower backup), options_import.yml, research.yml
 results/                   research results (bootstrap per stock, summaries, tuned weights)
 price_data/                25 years of daily prices per stock (test and validation data)
 tests/                     formula, look-ahead, data-store and GEX checks

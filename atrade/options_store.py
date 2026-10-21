@@ -187,9 +187,10 @@ def read_chain(ticker: str, start=None, end=None, chain_dir=None, download: bool
 # ---------------------------------------------------------------- summary ---
 
 def summarize(chain: pd.DataFrame, features: pd.DataFrame | None = None, gex_scale: float = 1.0,
-              compute_gex: bool = False) -> pd.DataFrame:
+              compute_gex: bool = False, rate: float = 0.045) -> pd.DataFrame:
     """One row per (date, ticker). GEX levels come from Watchtower's features
-    when given (its own gamma engine); otherwise they can be computed here."""
+    when given (older days); otherwise they are computed here with Watchtower's
+    method (gex.daily_levels), so both kinds of day form one series."""
     rows = []
     feat = None
     if features is not None and len(features):
@@ -215,7 +216,7 @@ def summarize(chain: pd.DataFrame, features: pd.DataFrame | None = None, gex_sca
                       "put_wall_price": f.get("put_wall"), "put_wall_gex": f.get("put_wall_gex"),
                       "ivx_30d": f.get("ivx_30d"), "gex_source": "watchtower"})
         elif compute_gex and g["iv"].notna().any() and np.isfinite(spot):
-            r.update(G.levels(g, spot, gex_scale)); r["gex_source"] = "computed"
+            r.update(G.daily_levels(g, spot, rate)); r["gex_source"] = "computed"
         rows.append(r)
     out = pd.DataFrame(rows)
     for c in SUMMARY_COLS:
@@ -298,7 +299,19 @@ def status(store=None) -> dict:
             "summary_last": s["date"].max().date() if len(s) else None,
             "tickers": int(s["ticker"].nunique()) if len(s) else 0,
             "volume_days": int(s.loc[s["pc_volume"].notna(), "date"].nunique()) if len(s) else 0,
-            "last_sync": st.get("last_sync"), "release": f"https://github.com/{REPO}/releases/tag/{RELEASE_TAG}"}
+            "last_sync": st.get("last_sync"), "last_collect": _last_collect(store), "release": f"https://github.com/{REPO}/releases/tag/{RELEASE_TAG}"}
+
+
+def _last_collect(store=None):
+    p = paths(store)["root"] / "collect_state.json"
+    if not p.exists():
+        return None
+    st = json.loads(p.read_text())
+    if not st:
+        return None
+    day = max(st)
+    v = st[day]
+    return f"session {day}: {v['collected']} of {v['stocks']} stocks (last run {v['last_run'].replace('T', ' ')})"
 
 
 def universe(store=None) -> list[str]:
