@@ -1,0 +1,15 @@
+{
+ "2026-10-21": {
+  "stocks": 516,
+  "collected": 511,
+  "failed": {
+   "AVB": "ValueError: no price history",
+   "EA": "ValueError: no price history",
+   "EQR": "ValueError: no price history",
+   "PSKY": "ValueError: Yahoo's latest close is 2026-10-16, not 2026-10-21 yet",
+   "WBD": "ValueError: no price history"
+  },
+  "last_run": "2026-10-21T17:37-04:00",
+  "minutes": 26.4
+ }
+}
