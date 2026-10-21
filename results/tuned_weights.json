@@ -1,0 +1,41 @@
+{
+  "chosen_on": "training block (first 60%) of all stocks",
+  "holding_period": 10,
+  "objective": "mean (rating trade return after costs - buy-and-hold), averaged over stocks",
+  "tuned": {
+    "w_trend": 0.7,
+    "w_reversal": 0.0,
+    "w_sentiment": 0.3,
+    "cutoff": 0.5
+  },
+  "tuned_training": {
+    "excess": -0.003834423954868082,
+    "stocks": 153,
+    "trades": 8564
+  },
+  "tuned_validation": {
+    "excess": -0.007196057027830412,
+    "stocks": 153,
+    "trades": 4250
+  },
+  "tuned_final_test": {
+    "excess": -0.007215342449420315,
+    "stocks": 154,
+    "trades": 3525
+  },
+  "framework_training": {
+    "excess": -0.00592401130862371,
+    "stocks": 154,
+    "trades": 10756
+  },
+  "framework_validation": {
+    "excess": -0.009165467988663174,
+    "stocks": 154,
+    "trades": 4506
+  },
+  "framework_final_test": {
+    "excess": -0.005450997909464507,
+    "stocks": 154,
+    "trades": 4422
+  }
+}
