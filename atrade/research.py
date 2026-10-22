@@ -300,7 +300,7 @@ def combine(s: dict = DEFAULTS, log=print):
     if len(L):
         L["group"] = L["ticker"].map(groups).fillna("All") if groups else "All"
         for blk in ("Training", "Final test"):
-            for grp in sorted(set(L["group"])) + ["All stocks"]:
+            for grp in (sorted(set(L["group"])) if groups else []) + ["All stocks"]:
                 sub = L[(L["block"] == blk) & ((L["group"] == grp) | (grp == "All stocks"))]
                 U = sub.loc[sub["pattern"] == "_all", "x"].to_numpy()
                 for k in lmw.NAMES:
