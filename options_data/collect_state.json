@@ -9,7 +9,7 @@
    "PSKY": "ValueError: Yahoo's latest close is 2026-10-16, not 2026-10-21 yet",
    "WBD": "ValueError: no price history"
   },
-  "last_run": "2026-10-21T22:12-04:00",
-  "minutes": 10.5
+  "last_run": "2026-10-22T07:55-04:00",
+  "minutes": 10.4
  }
 }
