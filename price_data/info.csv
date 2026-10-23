@@ -1,0 +1,518 @@
+ticker,name,exchange,exchange_group,quote_type,sector,industry,shares_outstanding,market_cap,info_date
+A,"Agilent Technologies, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,281965813.0,48799825920.0,2026-10-23
+AAPL,Apple Inc.,NMS,Nasdaq,EQUITY,Technology,Consumer Electronics,14594180000.0,5074761285632.0,2026-10-23
+ABBV,AbbVie Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,1767117285.0,504759418880.0,2026-10-23
+ABNB,"Airbnb, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Travel Services,419529556.0,102997114880.0,2026-10-23
+ABT,Abbott Laboratories,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,1730383296.0,179440746496.0,2026-10-23
+ACGL,Arch Capital Group Ltd.,NMS,Nasdaq,EQUITY,Financial Services,Insurance - Diversified,341229126.0,34699591680.0,2026-10-23
+ACN,Accenture plc,NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,611942109.0,152599986176.0,2026-10-23
+ADBE,Adobe Inc.,NMS,Nasdaq,EQUITY,Technology,Software - Application,389200000.0,102678749184.0,2026-10-23
+ADI,"Analog Devices, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductors,484565465.0,189499015168.0,2026-10-23
+ADM,Archer-Daniels-Midland Company,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Farm Products,481959583.0,38624239616.0,2026-10-23
+ADP,"Automatic Data Processing, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,396251548.0,120523874304.0,2026-10-23
+ADSK,"Autodesk, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,209000000.0,52709797888.0,2026-10-23
+AEE,Ameren Corporation,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,276843251.0,29910147072.0,2026-10-23
+AEP,American Electric Power Company,NMS,Nasdaq,EQUITY,Utilities,Utilities - Regulated Electric,544397352.0,70602899456.0,2026-10-23
+AES,The AES Corporation,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Diversified,713438630.0,10701580288.0,2026-10-23
+AFL,AFLAC Incorporated,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Life,501343298.0,60416880640.0,2026-10-23
+AIG,"American International Group, I",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Diversified,522893169.0,42490302464.0,2026-10-23
+AIZ,"Assurant, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,49323767.0,14044943360.0,2026-10-23
+AJG,Arthur J. Gallagher & Co.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance Brokers,256341000.0,68709642240.0,2026-10-23
+AKAM,"Akamai Technologies, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,143716609.0,13441814528.0,2026-10-23
+ALB,Albemarle Corporation,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,118005057.0,11053533184.0,2026-10-23
+ALGN,"Align Technology, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Medical Instruments & Supplies,71039852.0,10976367616.0,2026-10-23
+ALL,Allstate Corporation (The),NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,252857950.0,64021106688.0,2026-10-23
+ALLE,Allegion plc,NYQ,NYSE/AMEX,EQUITY,Industrials,Security & Protection Services,85036786.0,15219883008.0,2026-10-23
+AMAT,"Applied Materials, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductor Equipment & Materials,793597443.0,299376705536.0,2026-10-23
+AMCR,Amcor plc,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Packaging & Containers,461945690.0,21300316160.0,2026-10-23
+AMD,"Advanced Micro Devices, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductors,1632475042.0,843646697472.0,2026-10-23
+AME,"AMETEK, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,229261244.0,55029575680.0,2026-10-23
+AMGN,Amgen Inc.,NMS,Nasdaq,EQUITY,Healthcare,Drug Manufacturers - General,540632005.0,237478019072.0,2026-10-23
+AMP,"Ameriprise Financial, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,88333219.0,43476725760.0,2026-10-23
+AMT,American Tower Corporation (REI,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Specialty,465960048.0,88052473856.0,2026-10-23
+AMZN,"Amazon.com, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Internet Retail,10786313572.0,2675005718528.0,2026-10-23
+ANET,"Arista Networks, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Computer Hardware,1261224648.0,217397297152.0,2026-10-23
+AON,Aon plc,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance Brokers,212125434.0,64384311296.0,2026-10-23
+AOS,A.O. Smith Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,110047214.0,8378763776.0,2026-10-23
+APA,APA Corporation,NMS,Nasdaq,EQUITY,Energy,Oil & Gas E&P,350351510.0,18183243776.0,2026-10-23
+APD,"Air Products and Chemicals, Inc",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,222685530.0,68397862912.0,2026-10-23
+APH,Amphenol Corporation,NYQ,NYSE/AMEX,EQUITY,Technology,Electronic Components,2465966914.0,182703472640.0,2026-10-23
+APO,"Apollo Global Management, Inc. ",NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,590543159.0,66630987776.0,2026-10-23
+APP,Applovin Corporation,NMS,Nasdaq,EQUITY,Communication Services,Advertising Agencies,305732000.0,87428259840.0,2026-10-23
+APTV,Aptiv PLC,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Auto Parts,207633331.0,8863866880.0,2026-10-23
+ARE,Alexandria Real Estate Equities,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Office,172095277.0,7403538944.0,2026-10-23
+ARES,Ares Management Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,223957742.0,40503205888.0,2026-10-23
+ARM,Arm Holdings plc,NMS,Nasdaq,EQUITY,Technology,Semiconductors,1067998569.0,224632143872.0,2026-10-23
+ATO,Atmos Energy Corporation,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Gas,168988553.0,29101520896.0,2026-10-23
+AVAV,"AeroVironment, Inc.",NMS,Nasdaq,EQUITY,Industrials,Aerospace & Defense,50820702.0,6263651840.0,2026-10-23
+AVB,"AvalonBay Communities, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,142797963.0,26283393024.0,2026-10-23
+AVGO,Broadcom Inc.,NMS,Nasdaq,EQUITY,Technology,Semiconductors,4773629865.0,1535581224960.0,2026-10-23
+AVY,Avery Dennison Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Packaging & Containers,75788142.0,13780558848.0,2026-10-23
+AWK,"American Water Works Company, I",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Water,198728989.0,28368564224.0,2026-10-23
+AXON,"Axon Enterprise, Inc.",NMS,Nasdaq,EQUITY,Industrials,Aerospace & Defense,81237415.0,34149771264.0,2026-10-23
+AXP,American Express Company,NYQ,NYSE/AMEX,EQUITY,Financial Services,Credit Services,675309833.0,211520536576.0,2026-10-23
+AZO,"AutoZone, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Auto Parts,16173000.0,51765891072.0,2026-10-23
+BA,Boeing Company (The),NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,790370020.0,148866203648.0,2026-10-23
+BAC,Bank of America Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Diversified,6992748365.0,353553383424.0,2026-10-23
+BALL,Ball Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Packaging & Containers,264703357.0,17142190080.0,2026-10-23
+BAX,Baxter International Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Instruments & Supplies,516995999.0,13079998464.0,2026-10-23
+BBY,"Best Buy Co., Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Specialty Retail,209727698.0,20945506304.0,2026-10-23
+BDX,"Becton, Dickinson and Company",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Instruments & Supplies,272386800.0,54180462592.0,2026-10-23
+BEN,"Franklin Templeton, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,508076910.0,15780868096.0,2026-10-23
+BG,Bunge Limited,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Farm Products,192119123.0,19830536192.0,2026-10-23
+BIIB,Biogen Inc.,NMS,Nasdaq,EQUITY,Healthcare,Drug Manufacturers - General,147753998.0,37040451584.0,2026-10-23
+BKNG,Booking Holdings Inc. Common St,NMS,Nasdaq,EQUITY,Consumer Cyclical,Travel Services,751380500.0,117087625216.0,2026-10-23
+BKR,Baker Hughes Company,NMS,Nasdaq,EQUITY,Energy,Oil & Gas Equipment & Services,992674071.0,55450771456.0,2026-10-23
+BLDR,"Builders FirstSource, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Building Products & Equipment,107596457.0,6116858368.0,2026-10-23
+BLK,"BlackRock, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,154869259.0,181689008128.0,2026-10-23
+BMY,Bristol-Myers Squibb Company,NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,2042714656.0,125586096128.0,2026-10-23
+BN,Brookfield Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,2232266331.0,84762386432.0,2026-10-23
+BNY,The Bank of New York Mellon Cor,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Diversified,678504142.0,98566299648.0,2026-10-23
+BR,"Broadridge Financial Solutions,",NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,112900032.0,20692318208.0,2026-10-23
+BRO,"Brown & Brown, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance Brokers,334610357.0,24416518144.0,2026-10-23
+BSX,Boston Scientific Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,1449229526.0,66215297024.0,2026-10-23
+BWXT,"BWX Technologies, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,91621980.0,11653400576.0,2026-10-23
+BX,Blackstone Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,750625114.0,141009289216.0,2026-10-23
+BXP,"BXP, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Office,159661556.0,11232487424.0,2026-10-23
+C,"Citigroup, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Diversified,1677436783.0,202332438528.0,2026-10-23
+CAG,"ConAgra Brands, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Packaged Foods,477411517.0,7094334976.0,2026-10-23
+CAH,"Cardinal Health, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Distribution,231559345.0,57790267392.0,2026-10-23
+CARR,Carrier Global Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Building Products & Equipment,824325057.0,46360043520.0,2026-10-23
+CASY,"Caseys General Stores, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Specialty Retail,36960167.0,25844766720.0,2026-10-23
+CAT,"Caterpillar, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Farm & Heavy Construction Machinery,459674889.0,315796652032.0,2026-10-23
+CB,Chubb Limited,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,385799859.0,137001385984.0,2026-10-23
+CBOE,"Cboe Global Markets, Inc.",BTS,Other,EQUITY,Financial Services,Financial Data & Stock Exchanges,104431019.0,35550408704.0,2026-10-23
+CBRE,CBRE Group Inc,NYQ,NYSE/AMEX,EQUITY,Real Estate,Real Estate Services,289575298.0,35704635392.0,2026-10-23
+CCI,Crown Castle Inc.,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Specialty,437000000.0,37568888832.0,2026-10-23
+CCL,Carnival Corporation Ltd.,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Travel Services,1344610129.0,35107774464.0,2026-10-23
+CDNS,"Cadence Design Systems, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,275393000.0,87159128064.0,2026-10-23
+CDW,CDW Corporation,NMS,Nasdaq,EQUITY,Technology,Information Technology Services,125017426.0,20641626112.0,2026-10-23
+CEG,Constellation Energy Corporatio,NMS,Nasdaq,EQUITY,Utilities,Utilities - Independent Power Producers,354307379.0,89799204864.0,2026-10-23
+CF,"CF Industries Holdings, Inc.",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Agricultural Inputs,151338130.0,18263484416.0,2026-10-23
+CFG,"Citizens Financial Group, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,421219810.0,27438258176.0,2026-10-23
+CHD,"Church & Dwight Company, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Household & Personal Products,237203907.0,24951478272.0,2026-10-23
+CHRW,"C.H. Robinson Worldwide, Inc.",NMS,Nasdaq,EQUITY,Industrials,Integrated Freight & Logistics,115464332.0,16300100608.0,2026-10-23
+CHTR,"Charter Communications, Inc.",NMS,Nasdaq,EQUITY,Communication Services,Telecom Services,114457596.0,14114695168.0,2026-10-23
+CI,The Cigna Group,NYQ,NYSE/AMEX,EQUITY,Healthcare,Healthcare Plans,264240486.0,81108615168.0,2026-10-23
+CIEN,Ciena Corporation,NYQ,NYSE/AMEX,EQUITY,Technology,Communication Equipment,141808525.0,45415600128.0,2026-10-23
+CINF,Cincinnati Financial Corporatio,NMS,Nasdaq,EQUITY,Financial Services,Insurance - Property & Casualty,153478045.0,27058180096.0,2026-10-23
+CL,Colgate-Palmolive Company,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Household & Personal Products,797172829.0,74966130688.0,2026-10-23
+CLX,Clorox Company (The),NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Household & Personal Products,120938184.0,10449058816.0,2026-10-23
+CMCSA,Comcast Corporation,NMS,Nasdaq,EQUITY,Communication Services,Telecom Services,3539192198.0,80518569984.0,2026-10-23
+CME,CME Group Inc.,NMS,Nasdaq,EQUITY,Financial Services,Financial Data & Stock Exchanges,359576125.0,109926973440.0,2026-10-23
+CMG,"Chipotle Mexican Grill, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Restaurants,1265418000.0,34824302592.0,2026-10-23
+CMI,Cummins Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,137664487.0,71227604992.0,2026-10-23
+CMS,CMS Energy Corporation,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,313577136.0,21818699776.0,2026-10-23
+CNC,Centene Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Healthcare Plans,493995000.0,34663628800.0,2026-10-23
+CNP,"CenterPoint Energy, Inc (Holdin",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,658720288.0,27053641728.0,2026-10-23
+COF,Capital One Financial Corporati,NYQ,NYSE/AMEX,EQUITY,Financial Services,Credit Services,613484836.0,123519041536.0,2026-10-23
+COHR,Coherent Corp.,NYQ,NYSE/AMEX,EQUITY,Technology,Scientific & Technical Instruments,196931166.0,41215721472.0,2026-10-23
+COIN,"Coinbase Global, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Financial Data & Stock Exchanges,222803032.0,43387981824.0,2026-10-23
+COO,"The Cooper Companies, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Medical Instruments & Supplies,190155294.0,11639405568.0,2026-10-23
+COP,ConocoPhillips,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas E&P,1201337479.0,181161689088.0,2026-10-23
+COR,"Cencora, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Distribution,190827165.0,63163793408.0,2026-10-23
+COST,Costco Wholesale Corporation,NMS,Nasdaq,EQUITY,Consumer Defensive,Discount Stores,443129349.0,444600549376.0,2026-10-23
+CPAY,"Corpay, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Infrastructure,65659599.0,26819319808.0,2026-10-23
+CPB,The Campbell's Company,NMS,Nasdaq,EQUITY,Consumer Defensive,Packaged Foods,298234693.0,6182405120.0,2026-10-23
+CPRT,"Copart, Inc.",NMS,Nasdaq,EQUITY,Industrials,Specialty Business Services,926330452.0,26863583232.0,2026-10-23
+CPT,Camden Property Trust,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,115732578.0,11804723200.0,2026-10-23
+CRH,CRH PLC,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Building Materials,665284511.0,56476000256.0,2026-10-23
+CRL,Charles River Laboratories Inte,NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,48167730.0,16635687936.0,2026-10-23
+CRM,"Salesforce, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Application,823000000.0,204573114368.0,2026-10-23
+CRWD,"CrowdStrike Holdings, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,1023934842.0,263734902784.0,2026-10-23
+CSCO,"Cisco Systems, Inc.",NMS,Nasdaq,EQUITY,Technology,Communication Equipment,3942586873.0,419885514752.0,2026-10-23
+CSGP,"CoStar Group, Inc.",NMS,Nasdaq,EQUITY,Real Estate,Real Estate Services,405197588.0,13744302080.0,2026-10-23
+CSX,CSX Corporation,NMS,Nasdaq,EQUITY,Industrials,Railroads,1852474917.0,94087200768.0,2026-10-23
+CTAS,Cintas Corporation,NMS,Nasdaq,EQUITY,Industrials,Specialty Business Services,397075093.0,88984535040.0,2026-10-23
+CTSH,Cognizant Technology Solutions ,NMS,Nasdaq,EQUITY,Technology,Information Technology Services,450444209.0,31774334976.0,2026-10-23
+CTVA,"Corteva, Inc.",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Agricultural Inputs,667196000.0,8306590720.0,2026-10-23
+CVNA,Carvana Co.,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Auto & Truck Dealerships,719916415.0,64080289792.0,2026-10-23
+CVS,CVS Health Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Healthcare Plans,1278970369.0,119545364480.0,2026-10-23
+CVX,Chevron Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Integrated,1961603274.0,457465528320.0,2026-10-23
+D,"Dominion Energy, Inc.",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,879525949.0,57345089536.0,2026-10-23
+DAL,"Delta Air Lines, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Airlines,657912380.0,50514513920.0,2026-10-23
+DASH,"DoorDash, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Internet Retail,409082893.0,77724991488.0,2026-10-23
+DD,"DuPont de Nemours, Inc.",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,135042975.0,18440118272.0,2026-10-23
+DDOG,"Datadog, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,334904614.0,96824573952.0,2026-10-23
+DE,Deere & Company,NYQ,NYSE/AMEX,EQUITY,Industrials,Farm & Heavy Construction Machinery,269625412.0,174218461184.0,2026-10-23
+DECK,Deckers Outdoor Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Footwear & Accessories,136181857.0,11042985984.0,2026-10-23
+DELL,Dell Technologies Inc.,NYQ,NYSE/AMEX,EQUITY,Technology,Computer Hardware,315433188.0,290210381824.0,2026-10-23
+DG,Dollar General Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Discount Stores,220616790.0,29273640960.0,2026-10-23
+DGX,Quest Diagnostics Incorporated,NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,110373360.0,26698211328.0,2026-10-23
+DHI,"D.R. Horton, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Residential Construction,279701267.0,41250344960.0,2026-10-23
+DHR,Danaher Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,702986054.0,162038284288.0,2026-10-23
+DIS,Walt Disney Company (The),NYQ,NYSE/AMEX,EQUITY,Communication Services,Entertainment,1726686902.0,194286796800.0,2026-10-23
+DLR,"Digital Realty Trust, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Specialty,370998727.0,65097891840.0,2026-10-23
+DLTR,"Dollar Tree, Inc.",NMS,Nasdaq,EQUITY,Consumer Defensive,Discount Stores,187630299.0,23511953408.0,2026-10-23
+DOC,"Healthpeak Properties, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Healthcare Facilities,689527260.0,13647235072.0,2026-10-23
+DOV,Dover Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,134680225.0,26828300288.0,2026-10-23
+DOW,Dow Inc.,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Chemicals,722340711.0,23555532800.0,2026-10-23
+DPZ,Domino's Pizza Inc,NMS,Nasdaq,EQUITY,Consumer Cyclical,Restaurants,32896056.0,10316531712.0,2026-10-23
+DRI,"Darden Restaurants, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Restaurants,113143224.0,24031619072.0,2026-10-23
+DTE,DTE Energy Company,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,208088069.0,27444733952.0,2026-10-23
+DUK,Duke Energy Corporation (Holdin,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,779702193.0,97447182336.0,2026-10-23
+DVA,DaVita Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Care Facilities,63800000.0,11716232192.0,2026-10-23
+DVN,Devon Energy Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas E&P,1100000000.0,56528998400.0,2026-10-23
+DXCM,"DexCom, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Medical Devices,377360765.0,29411500032.0,2026-10-23
+EA,Electronic Arts Inc.,NMS,Nasdaq,EQUITY,Communication Services,Electronic Gaming & Multimedia,252387410.0,52925640704.0,2026-10-23
+EBAY,eBay Inc.,NMS,Nasdaq,EQUITY,Consumer Cyclical,Internet Retail,445000000.0,54027452416.0,2026-10-23
+ECL,Ecolab Inc.,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,280328603.0,80883212288.0,2026-10-23
+ED,"Consolidated Edison, Inc.",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,369828633.0,42803965952.0,2026-10-23
+EFX,"Equifax, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Consulting Services,117484896.0,21424545792.0,2026-10-23
+EG,"Everest Group, Ltd.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Reinsurance,38342734.0,15283415040.0,2026-10-23
+EIX,Edison International,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,384813979.0,22069082112.0,2026-10-23
+EL,"Estee Lauder Companies, Inc. (T",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Household & Personal Products,247815431.0,39373615104.0,2026-10-23
+ELV,"Elevance Health, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Healthcare Plans,216869290.0,95411650560.0,2026-10-23
+EME,"EMCOR Group, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Engineering & Construction,44109901.0,28568217600.0,2026-10-23
+EMR,Emerson Electric Company,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,557800000.0,90134896640.0,2026-10-23
+EOG,"EOG Resources, Inc.",NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas E&P,524529176.0,85513994240.0,2026-10-23
+EPAM,"EPAM Systems, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,51586981.0,7028726272.0,2026-10-23
+EQIX,"Equinix, Inc.",NMS,Nasdaq,EQUITY,Real Estate,REIT - Specialty,98671686.0,94234427392.0,2026-10-23
+EQR,Equity Residential,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,374944409.0,24611481600.0,2026-10-23
+EQT,EQT Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas E&P,625516000.0,34797457408.0,2026-10-23
+ERIE,Erie Indemnity Company,NMS,Nasdaq,EQUITY,Financial Services,Insurance Brokers,46189068.0,13256527872.0,2026-10-23
+ES,Eversource Energy (D/B/A),NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,376674754.0,25410478080.0,2026-10-23
+ESS,"Essex Property Trust, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,64268439.0,19187470336.0,2026-10-23
+ETN,"Eaton Corporation, PLC",NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,388400000.0,142197112832.0,2026-10-23
+ETR,Entergy Corporation,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,477777482.0,51284631552.0,2026-10-23
+EVRG,"Evergy, Inc.",NMS,Nasdaq,EQUITY,Utilities,Utilities - Regulated Electric,230567172.0,19466786816.0,2026-10-23
+EW,Edwards Lifesciences Corporatio,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,576400000.0,51339948032.0,2026-10-23
+EXC,Exelon Corporation,NMS,Nasdaq,EQUITY,Utilities,Utilities - Regulated Electric,1030253967.0,45774184448.0,2026-10-23
+EXE,Expand Energy Corporation,NMS,Nasdaq,EQUITY,Energy,Oil & Gas E&P,231503789.0,21583099904.0,2026-10-23
+EXPD,Expeditors International of Was,NYQ,NYSE/AMEX,EQUITY,Industrials,Integrated Freight & Logistics,129990622.0,25505460224.0,2026-10-23
+EXPE,"Expedia Group, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Travel Services,114498625.0,34687582208.0,2026-10-23
+EXR,Extra Space Storage Inc,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Industrial,211269558.0,31650953216.0,2026-10-23
+F,Ford Motor Company,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Auto Manufacturers,3916743591.0,46256111616.0,2026-10-23
+FANG,"Diamondback Energy, Inc.",NMS,Nasdaq,EQUITY,Energy,Oil & Gas E&P,280019792.0,57614069760.0,2026-10-23
+FAST,Fastenal Company,NMS,Nasdaq,EQUITY,Industrials,Industrial Distribution,1147497573.0,59566600192.0,2026-10-23
+FCX,"Freeport-McMoRan, Inc.",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Copper,1436017523.0,93599621120.0,2026-10-23
+FDS,FactSet Research Systems Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Financial Data & Stock Exchanges,35565543.0,11783576576.0,2026-10-23
+FDX,FedEx Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Integrated Freight & Logistics,236670435.0,70698188800.0,2026-10-23
+FE,FirstEnergy Corp.,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,578639932.0,26704234496.0,2026-10-23
+FFIV,"F5, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,56627182.0,25789153280.0,2026-10-23
+FICO,Fair Isaac Corporation,NYQ,NYSE/AMEX,EQUITY,Technology,Software - Application,21597635.0,17608769536.0,2026-10-23
+FIS,Fidelity National Information S,NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,515705917.0,19354441728.0,2026-10-23
+FISV,"Fiserv, Inc.",NMS,Nasdaq,EQUITY,,,531766721.0,26513889280.0,2026-10-23
+FITB,Fifth Third Bancorp,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,906892564.0,48047165440.0,2026-10-23
+FIX,"Comfort Systems USA, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Engineering & Construction,35194329.0,40855687168.0,2026-10-23
+FOX,Fox Corporation,NMS,Nasdaq,EQUITY,Communication Services,Entertainment,220248764.0,25072713728.0,2026-10-23
+FOXA,Fox Corporation,NMS,Nasdaq,EQUITY,Communication Services,Entertainment,201424858.0,28083464192.0,2026-10-23
+FRT,Federal Realty Investment Trust,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Retail,86889133.0,9504121856.0,2026-10-23
+FSLR,"First Solar, Inc.",NMS,Nasdaq,EQUITY,Technology,Solar,107469788.0,18483730432.0,2026-10-23
+FTNT,"Fortinet, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,733713653.0,132061126656.0,2026-10-23
+FTV,Fortive Corporation,NYQ,NYSE/AMEX,EQUITY,Technology,Scientific & Technical Instruments,302017052.0,18196527104.0,2026-10-23
+GD,General Dynamics Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,270557195.0,94521851904.0,2026-10-23
+GDDY,GoDaddy Inc.,NYQ,NYSE/AMEX,EQUITY,Technology,Software - Infrastructure,126647704.0,14284594176.0,2026-10-23
+GE,GE Aerospace,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,1037562513.0,296369356800.0,2026-10-23
+GEHC,GE HealthCare Technologies Inc.,NMS,Nasdaq,EQUITY,Healthcare,Medical Devices,451686252.0,32272979968.0,2026-10-23
+GEN,Gen Digital Inc.,NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,598587032.0,14892844032.0,2026-10-23
+GEV,GE Vernova Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,266333581.0,217061867520.0,2026-10-23
+GILD,"Gilead Sciences, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Drug Manufacturers - General,1239955155.0,193482604544.0,2026-10-23
+GIS,"General Mills, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Packaged Foods,534687144.0,18387890176.0,2026-10-23
+GL,Globe Life Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Life,76849447.0,11895525376.0,2026-10-23
+GLW,Corning Incorporated,NYQ,NYSE/AMEX,EQUITY,Technology,Electronic Components,861388331.0,106545127424.0,2026-10-23
+GM,General Motors Company,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Auto Manufacturers,877451541.0,66616119296.0,2026-10-23
+GNRC,Generac Holdlings Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,59063935.0,11040230400.0,2026-10-23
+GOOG,Alphabet Inc.,NMS,Nasdaq,EQUITY,Communication Services,Internet Content & Information,5527000000.0,3880313683968.0,2026-10-23
+GOOGL,Alphabet Inc.,NMS,Nasdaq,EQUITY,Communication Services,Internet Content & Information,5867155790.0,3916147458048.0,2026-10-23
+GPC,Genuine Parts Company,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Auto Parts,137859758.0,16959507456.0,2026-10-23
+GPN,Global Payments Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Business Services,264618390.0,21915695104.0,2026-10-23
+GRMN,Garmin Ltd.,NYQ,NYSE/AMEX,EQUITY,Technology,Scientific & Technical Instruments,192852536.0,56648503296.0,2026-10-23
+GS,"Goldman Sachs Group, Inc. (The)",NYQ,NYSE/AMEX,EQUITY,Financial Services,Capital Markets,291171408.0,254972968960.0,2026-10-23
+GSAT,"Globalstar, Inc.",NMS,Nasdaq,EQUITY,Communication Services,Telecom Services,129563390.0,10691570688.0,2026-10-23
+GWW,"W.W. Grainger, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Industrial Distribution,47100942.0,63581564928.0,2026-10-23
+HAL,Halliburton Company,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Equipment & Services,833130367.0,29092911104.0,2026-10-23
+HAS,"Hasbro, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Leisure,141044467.0,16564261888.0,2026-10-23
+HBAN,Huntington Bancshares Incorpora,NMS,Nasdaq,EQUITY,Financial Services,Banks - Regional,2020414826.0,31781124096.0,2026-10-23
+HCA,"HCA Healthcare, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Care Facilities,216501500.0,101545697280.0,2026-10-23
+HD,"Home Depot, Inc. (The)",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Home Improvement Retail,997689626.0,319091048448.0,2026-10-23
+HIG,"The Hartford Insurance Group, I",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Diversified,270872002.0,37044453376.0,2026-10-23
+HII,"Huntington Ingalls Industries, ",NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,39404598.0,10800012288.0,2026-10-23
+HLT,Hilton Worldwide Holdings Inc.,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Lodging,225064910.0,78689443840.0,2026-10-23
+HON,Honeywell International Inc.,NMS,Nasdaq,EQUITY,Industrials,Conglomerates,316940010.0,70091276288.0,2026-10-23
+HOOD,"Robinhood Markets, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Capital Markets,790630234.0,85475753984.0,2026-10-23
+HPE,Hewlett Packard Enterprise Comp,NYQ,NYSE/AMEX,EQUITY,Technology,Communication Equipment,1327464779.0,75253981184.0,2026-10-23
+HPQ,HP Inc.,NYQ,NYSE/AMEX,EQUITY,Technology,Computer Hardware,901790969.0,30336247808.0,2026-10-23
+HRL,Hormel Foods Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Packaged Foods,550350800.0,11590387712.0,2026-10-23
+HSIC,"Henry Schein, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Medical Distribution,111446542.0,9468497920.0,2026-10-23
+HST,"Host Hotels & Resorts, Inc.",NMS,Nasdaq,EQUITY,Real Estate,REIT - Hotel & Motel,685124399.0,17173638144.0,2026-10-23
+HSY,The Hershey Company,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Confectioners,146312143.0,34085029888.0,2026-10-23
+HUBB,Hubbell Inc,NYQ,NYSE/AMEX,EQUITY,Industrials,Electrical Equipment & Parts,52832571.0,23674275840.0,2026-10-23
+HUM,Humana Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Healthcare Plans,120080308.0,50682294272.0,2026-10-23
+HWM,Howmet Aerospace Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,398801399.0,74141171712.0,2026-10-23
+IBKR,"Interactive Brokers Group, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Capital Markets,453077771.0,136782307328.0,2026-10-23
+IBM,International Business Machines,NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,945120805.0,239644835840.0,2026-10-23
+ICE,Intercontinental Exchange Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Financial Data & Stock Exchanges,561394487.0,91361345536.0,2026-10-23
+IDXX,"IDEXX Laboratories, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Diagnostics & Research,78781116.0,44147363840.0,2026-10-23
+IEX,IDEX Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,73719896.0,16885542912.0,2026-10-23
+IFF,International Flavors & Fragran,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,255149963.0,24022370304.0,2026-10-23
+INCY,Incyte Corporation,NMS,Nasdaq,EQUITY,Healthcare,Biotechnology,202697746.0,23454154752.0,2026-10-23
+INTC,Intel Corporation,NMS,Nasdaq,EQUITY,Technology,Semiconductors,5286105262.0,459679694848.0,2026-10-23
+INTU,Intuit Inc.,NMS,Nasdaq,EQUITY,Technology,Software - Application,267236000.0,91766177792.0,2026-10-23
+INVH,Invitation Homes Inc.,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,590623226.0,16265763840.0,2026-10-23
+IP,International Paper Company,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Packaging & Containers,529569895.0,17576423424.0,2026-10-23
+IQV,"IQVIA Holdings, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,164600000.0,45982654464.0,2026-10-23
+IR,Ingersoll Rand Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,387999429.0,28510199808.0,2026-10-23
+IRM,Iron Mountain Incorporated (Del,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Specialty,297702812.0,32735401984.0,2026-10-23
+ISRG,"Intuitive Surgical, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Medical Instruments & Supplies,353278038.0,159784124416.0,2026-10-23
+IT,"Gartner, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,63148976.0,14541945856.0,2026-10-23
+ITW,Illinois Tool Works Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,284800000.0,78533599232.0,2026-10-23
+IVZ,Invesco Ltd,NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,441499780.0,12388483072.0,2026-10-23
+IWM,iShares Russell 2000 Index Fund,PCX,NYSE/AMEX,ETF,,,281049984.0,,2026-10-23
+J,Jacobs Solutions Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Engineering & Construction,117038611.0,16977619968.0,2026-10-23
+JBHT,"J.B. Hunt Transport Services, I",NMS,Nasdaq,EQUITY,Industrials,Integrated Freight & Logistics,93914939.0,21227593728.0,2026-10-23
+JBL,Jabil Inc.,NYQ,NYSE/AMEX,EQUITY,Technology,Electronic Components,104787089.0,28708517888.0,2026-10-23
+JCI,Johnson Controls International ,NYQ,NYSE/AMEX,EQUITY,Industrials,Building Products & Equipment,605741470.0,87202545664.0,2026-10-23
+JKHY,"Jack Henry & Associates, Inc.",NMS,Nasdaq,EQUITY,Technology,Information Technology Services,70111999.0,11396706304.0,2026-10-23
+JNJ,Johnson & Johnson,NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,2407310266.0,635072544768.0,2026-10-23
+JPM,JP Morgan Chase & Co.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Diversified,2655600000.0,880543858688.0,2026-10-23
+KDP,Keurig Dr Pepper Inc.,NMS,Nasdaq,EQUITY,Consumer Defensive,Beverages - Non-Alcoholic,1360826038.0,47193444352.0,2026-10-23
+KEY,KeyCorp,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,1067128554.0,22495070208.0,2026-10-23
+KEYS,Keysight Technologies Inc.,NYQ,NYSE/AMEX,EQUITY,Technology,Scientific & Technical Instruments,170244745.0,53587939328.0,2026-10-23
+KHC,The Kraft Heinz Company,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Packaged Foods,1185823758.0,29408428032.0,2026-10-23
+KIM,Kimco Realty Corporation (HC),NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Retail,670789373.0,15844045824.0,2026-10-23
+KKR,KKR & Co. Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,897635601.0,84360757248.0,2026-10-23
+KLAC,KLA Corporation,NMS,Nasdaq,EQUITY,Technology,Semiconductor Equipment & Materials,1305006492.0,190021992448.0,2026-10-23
+KMB,Kimberly-Clark Corporation,NMS,Nasdaq,EQUITY,Consumer Defensive,Household & Personal Products,332579038.0,36633583616.0,2026-10-23
+KMI,"Kinder Morgan, Inc.",NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Midstream,2226802089.0,76668796928.0,2026-10-23
+KO,Coca-Cola Company (The),NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Beverages - Non-Alcoholic,4302549243.0,398889320448.0,2026-10-23
+KR,Kroger Company (The),NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Grocery Stores,590588700.0,39433605120.0,2026-10-23
+KVUE,Kenvue Inc.,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Household & Personal Products,1920773467.0,37589536768.0,2026-10-23
+L,Loews Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,204427720.0,22897948672.0,2026-10-23
+LDOS,"Leidos Holdings, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Information Technology Services,125492209.0,17076979712.0,2026-10-23
+LEN,Lennar Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Residential Construction,207876222.0,20202487808.0,2026-10-23
+LH,Labcorp Holdings Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,81100000.0,26677846016.0,2026-10-23
+LHX,"L3Harris Technologies, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,186214616.0,47292928000.0,2026-10-23
+LII,"Lennox International, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Building Products & Equipment,34560675.0,12995160064.0,2026-10-23
+LIN,Linde plc,NMS,Nasdaq,EQUITY,Basic Materials,Specialty Chemicals,460980163.0,234560536576.0,2026-10-23
+LITE,Lumentum Holdings Inc.,NMS,Nasdaq,EQUITY,Technology,Communication Equipment,90582856.0,68496035840.0,2026-10-23
+LLY,Eli Lilly and Company,NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,891741406.0,1135596929024.0,2026-10-23
+LMT,Lockheed Martin Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,231004640.0,139568381952.0,2026-10-23
+LNT,Alliant Energy Corporation,NMS,Nasdaq,EQUITY,Utilities,Utilities - Regulated Electric,259284699.0,18061772800.0,2026-10-23
+LOW,"Lowe's Companies, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Home Improvement Retail,561054019.0,111470206976.0,2026-10-23
+LRCX,Lam Research Corporation,NMS,Nasdaq,EQUITY,Technology,Semiconductor Equipment & Materials,1251424362.0,287952764928.0,2026-10-23
+LULU,lululemon athletica inc.,NMS,Nasdaq,EQUITY,Consumer Cyclical,Apparel Retail,105594064.0,11467930624.0,2026-10-23
+LUV,Southwest Airlines Company,NYQ,NYSE/AMEX,EQUITY,Industrials,Airlines,489208201.0,20424441856.0,2026-10-23
+LVS,Las Vegas Sands Corp.,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Resorts & Casinos,647701184.0,23109978112.0,2026-10-23
+LYB,LyondellBasell Industries NV,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,323037952.0,21465870336.0,2026-10-23
+LYV,"Live Nation Entertainment, Inc.",NYQ,NYSE/AMEX,EQUITY,Communication Services,Entertainment,232959505.0,40404496384.0,2026-10-23
+MA,Mastercard Incorporated,NYQ,NYSE/AMEX,EQUITY,Financial Services,Credit Services,869464115.0,546279751680.0,2026-10-23
+MAA,Mid-America Apartment Communiti,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,116021957.0,14249483264.0,2026-10-23
+MAR,Marriott International,NMS,Nasdaq,EQUITY,Consumer Cyclical,Lodging,260766288.0,101883994112.0,2026-10-23
+MAS,Masco Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Building Products & Equipment,197187430.0,14988216320.0,2026-10-23
+MCD,McDonald's Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Restaurants,707641531.0,175820619776.0,2026-10-23
+MCHP,Microchip Technology Incorporat,NMS,Nasdaq,EQUITY,Technology,Semiconductors,543008691.0,40209797120.0,2026-10-23
+MCK,McKesson Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Distribution,116590363.0,116680138752.0,2026-10-23
+MCO,Moody's Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Financial Data & Stock Exchanges,172424082.0,83358425088.0,2026-10-23
+MDLZ,"Mondelez International, Inc.",NMS,Nasdaq,EQUITY,Consumer Defensive,Confectioners,1276308057.0,81428455424.0,2026-10-23
+MDT,Medtronic plc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,1279137890.0,122042556416.0,2026-10-23
+MET,"MetLife, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Life,635476927.0,62797828096.0,2026-10-23
+META,"Meta Platforms, Inc.",NMS,Nasdaq,EQUITY,Communication Services,Internet Content & Information,2205128509.0,1637078401024.0,2026-10-23
+MGM,MGM Resorts International,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Resorts & Casinos,255851235.0,7179185664.0,2026-10-23
+MKC,"McCormick & Company, Incorporat",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Packaged Foods,254541615.0,12947382272.0,2026-10-23
+MLM,"Martin Marietta Materials, Inc.",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Building Materials,71019382.0,36018900992.0,2026-10-23
+MMM,3M Company,NYQ,NYSE/AMEX,EQUITY,Industrials,Conglomerates,515722417.0,89457213440.0,2026-10-23
+MNST,Monster Beverage Corporation,NMS,Nasdaq,EQUITY,Consumer Defensive,Beverages - Non-Alcoholic,1959051764.0,90488602624.0,2026-10-23
+MO,"Altria Group, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Tobacco,1669743926.0,124078661632.0,2026-10-23
+MOS,Mosaic Company (The),NYQ,NYSE/AMEX,EQUITY,Basic Materials,Agricultural Inputs,317895646.0,5671258624.0,2026-10-23
+MPC,Marathon Petroleum Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Refining & Marketing,280824763.0,128398704640.0,2026-10-23
+MPWR,"Monolithic Power Systems, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductors,49143000.0,56028917760.0,2026-10-23
+MRK,"Merck & Company, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,2467171638.0,358406029312.0,2026-10-23
+MRNA,"Moderna, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Biotechnology,399235889.0,79887106048.0,2026-10-23
+MRSH,Marsh,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance Brokers,477211268.0,94239678464.0,2026-10-23
+MS,Morgan Stanley,NYQ,NYSE/AMEX,EQUITY,Financial Services,Capital Markets,1570566292.0,281900941312.0,2026-10-23
+MSCI,MSCI Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Financial Data & Stock Exchanges,72700000.0,44755574784.0,2026-10-23
+MSFT,Microsoft Corporation,NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,7425545491.0,3894773022720.0,2026-10-23
+MSI,"Motorola Solutions, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Communication Equipment,165493788.0,79739871232.0,2026-10-23
+MTB,M&T Bank Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,144416262.0,32011307008.0,2026-10-23
+MTD,"Mettler-Toledo International, I",NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,20036559.0,33466865664.0,2026-10-23
+MU,"Micron Technology, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductors,1131423212.0,992880427008.0,2026-10-23
+NCLH,Norwegian Cruise Line Holdings ,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Travel Services,459187846.0,6933736448.0,2026-10-23
+NDAQ,"Nasdaq, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Financial Data & Stock Exchanges,558977372.0,57328713728.0,2026-10-23
+NDSN,Nordson Corporation,NMS,Nasdaq,EQUITY,Industrials,Specialty Industrial Machinery,55699366.0,17759186944.0,2026-10-23
+NEE,"NextEra Energy, Inc.",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,2097306049.0,172188827648.0,2026-10-23
+NEM,Newmont Corporation,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Gold,1039193185.0,113136967680.0,2026-10-23
+NET,"Cloudflare, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Infrastructure,322618775.0,115985850368.0,2026-10-23
+NFLX,"Netflix, Inc.",NMS,Nasdaq,EQUITY,Communication Services,Entertainment,4163939676.0,274195415040.0,2026-10-23
+NI,NiSource Inc,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Gas,479560100.0,20755359744.0,2026-10-23
+NKE,"Nike, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Footwear & Accessories,1203921077.0,55402016768.0,2026-10-23
+NOC,Northrop Grumman Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,142063026.0,78339235840.0,2026-10-23
+NOW,"ServiceNow, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Application,1033862000.0,164342710272.0,2026-10-23
+NRG,"NRG Energy, Inc.",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Independent Power Producers,210210483.0,19404529664.0,2026-10-23
+NSC,Norfolk Southern Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Railroads,224616686.0,74121256960.0,2026-10-23
+NTAP,"NetApp, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,196419005.0,42324365312.0,2026-10-23
+NTRS,Northern Trust Corporation,NMS,Nasdaq,EQUITY,Financial Services,Asset Management,182955653.0,30721912832.0,2026-10-23
+NUE,Nucor Corporation,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Steel,226875676.0,58558877696.0,2026-10-23
+NVDA,NVIDIA Corporation,NMS,Nasdaq,EQUITY,Technology,Semiconductors,24147000000.0,5094050889728.0,2026-10-23
+NVS,Novartis AG,NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,1900714840.0,287236030464.0,2026-10-23
+NWS,News Corporation,NMS,Nasdaq,EQUITY,Communication Services,Entertainment,179371112.0,18190266368.0,2026-10-23
+NWSA,News Corporation,NMS,Nasdaq,EQUITY,Communication Services,Entertainment,359280552.0,16555458560.0,2026-10-23
+NXPI,NXP Semiconductors N.V.,NMS,Nasdaq,EQUITY,Technology,Semiconductors,252164174.0,59238408192.0,2026-10-23
+O,Realty Income Corporation,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Retail,946218033.0,53830344704.0,2026-10-23
+ODFL,"Old Dominion Freight Line, Inc.",NMS,Nasdaq,EQUITY,Industrials,Trucking,207968283.0,37995806720.0,2026-10-23
+OKE,"ONEOK, Inc.",NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Midstream,630409203.0,60412116992.0,2026-10-23
+OKLO,Oklo Inc.,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Independent Power Producers,186017650.0,4901564928.0,2026-10-23
+OMC,Omnicom Group Inc.,NYQ,NYSE/AMEX,EQUITY,Communication Services,Advertising Agencies,274345967.0,22682923008.0,2026-10-23
+ON,ON Semiconductor Corporation,NMS,Nasdaq,EQUITY,Technology,Semiconductors,389318613.0,28128270336.0,2026-10-23
+ORCL,Oracle Corporation,NYQ,NYSE/AMEX,EQUITY,Technology,Software - Infrastructure,3031501149.0,382454169600.0,2026-10-23
+ORLY,"O'Reilly Automotive, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Auto Parts,808960792.0,72741748736.0,2026-10-23
+OTIS,Otis Worldwide Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,380669339.0,28607301632.0,2026-10-23
+OXY,Occidental Petroleum Corporatio,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas E&P,999637371.0,64146726912.0,2026-10-23
+PANW,"Palo Alto Networks, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,818000000.0,311289905152.0,2026-10-23
+PAYX,"Paychex, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,355980473.0,42019934208.0,2026-10-23
+PCAR,PACCAR Inc.,NMS,Nasdaq,EQUITY,Industrials,Farm & Heavy Construction Machinery,526364953.0,56299995136.0,2026-10-23
+PCG,Pacific Gas & Electric Co.,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,2202366906.0,37919895552.0,2026-10-23
+PEG,Public Service Enterprise Group,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,498420030.0,35896209408.0,2026-10-23
+PEP,"Pepsico, Inc.",NMS,Nasdaq,EQUITY,Consumer Defensive,Beverages - Non-Alcoholic,1362741092.0,185019367424.0,2026-10-23
+PFE,"Pfizer, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - General,5699673589.0,171161206784.0,2026-10-23
+PFG,Principal Financial Group Inc,NMS,Nasdaq,EQUITY,Financial Services,Asset Management,214104641.0,23244271616.0,2026-10-23
+PG,Procter & Gamble Company (The),NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Household & Personal Products,2317783143.0,373209432064.0,2026-10-23
+PGR,Progressive Corporation (The),NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,580400000.0,132371832832.0,2026-10-23
+PH,Parker-Hannifin Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,126112415.0,111050809344.0,2026-10-23
+PHM,"PulteGroup, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Residential Construction,190486353.0,23085041664.0,2026-10-23
+PKG,Packaging Corporation of Americ,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Packaging & Containers,89098299.0,22033117184.0,2026-10-23
+PLD,"Prologis, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Industrial,950333372.0,122920951808.0,2026-10-23
+PLTR,Palantir Technologies Inc.,NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,2300713329.0,472801738752.0,2026-10-23
+PM,Philip Morris International Inc,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Tobacco,1558613439.0,310896623616.0,2026-10-23
+PNC,"PNC Financial Services Group, I",NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,398943667.0,89546899456.0,2026-10-23
+PNR,Pentair plc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,159600000.0,8825879552.0,2026-10-23
+PNW,Pinnacle West Capital Corporati,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,121197234.0,12832362496.0,2026-10-23
+PODD,Insulet Corporation,NMS,Nasdaq,EQUITY,Healthcare,Medical Devices,69354199.0,10334469120.0,2026-10-23
+POOL,Pool Corporation,NMS,Nasdaq,EQUITY,Industrials,Industrial Distribution,36340747.0,7234716160.0,2026-10-23
+PPG,"PPG Industries, Inc.",NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,222300000.0,24588603392.0,2026-10-23
+PPL,PPL Corporation,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,752544841.0,26324017152.0,2026-10-23
+PRU,"Prudential Financial, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Life,345000000.0,39671549952.0,2026-10-23
+PSA,Public Storage,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Industrial,186852295.0,57903656960.0,2026-10-23
+PSKY,Paramount Skydance Corporation,NMS,Nasdaq,EQUITY,Communication Services,Entertainment,1093020754.0,10992190464.0,2026-10-23
+PSX,Phillips 66,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Refining & Marketing,400935020.0,113536770048.0,2026-10-23
+PTC,PTC Inc.,NMS,Nasdaq,EQUITY,Technology,Software - Application,108632228.0,21052925952.0,2026-10-23
+PWR,"Quanta Services, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Engineering & Construction,150343393.0,82152136704.0,2026-10-23
+PYPL,"PayPal Holdings, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Credit Services,855460874.0,48778379264.0,2026-10-23
+Q,"Qnity Electronics, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Semiconductor Equipment & Materials,209208543.0,22977374208.0,2026-10-23
+QCOM,QUALCOMM Incorporated,NMS,Nasdaq,EQUITY,Technology,Semiconductors,1067839507.0,187843641344.0,2026-10-23
+QQQ,"Invesco QQQ Trust, Series 1",NGM,Nasdaq,ETF,,,393100000.0,,2026-10-23
+RCL,Royal Caribbean Cruises Ltd.,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Travel Services,267452084.0,73945153536.0,2026-10-23
+REG,Regency Centers Corporation,NMS,Nasdaq,EQUITY,Real Estate,REIT - Retail,183120547.0,13831207936.0,2026-10-23
+REGN,"Regeneron Pharmaceuticals, Inc.",NMS,Nasdaq,EQUITY,Healthcare,Biotechnology,101137842.0,82880831488.0,2026-10-23
+RF,Regions Financial Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,851929506.0,24254433280.0,2026-10-23
+RJF,"Raymond James Financial, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,192100000.0,30294169600.0,2026-10-23
+RL,Ralph Lauren Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Apparel Manufacturing,37700963.0,22486337536.0,2026-10-23
+RMD,ResMed Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Instruments & Supplies,140639243.0,35562041344.0,2026-10-23
+ROK,"Rockwell Automation, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,111273953.0,47414943744.0,2026-10-23
+ROL,"Rollins, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Personal Services,481145404.0,16753482752.0,2026-10-23
+ROP,"Roper Technologies, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,98900874.0,43332427776.0,2026-10-23
+ROST,"Ross Stores, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Apparel Retail,320781076.0,73555107840.0,2026-10-23
+RSG,"Republic Services, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Waste Management,306212978.0,73628909568.0,2026-10-23
+RTX,RTX Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,1349440548.0,257756626944.0,2026-10-23
+RVTY,"Revvity, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,111586401.0,17716574208.0,2026-10-23
+SATS,"Strive, Inc. - 15.00% Series A ",NGM,Nasdaq,EQUITY,Financial Services,Asset Management,,,2026-10-23
+SBAC,SBA Communications Corporation,NMS,Nasdaq,EQUITY,Real Estate,REIT - Specialty,106088110.0,19599777792.0,2026-10-23
+SBUX,Starbucks Corporation,NMS,Nasdaq,EQUITY,Consumer Cyclical,Restaurants,1140000000.0,114912002048.0,2026-10-23
+SCHW,Charles Schwab Corporation (The,NYQ,NYSE/AMEX,EQUITY,Financial Services,Capital Markets,1729335714.0,156643229696.0,2026-10-23
+SHOP,Shopify Inc.,NMS,Nasdaq,EQUITY,Technology,Software - Application,1219581025.0,218888372224.0,2026-10-23
+SHW,Sherwin-Williams Company (The),NYQ,NYSE/AMEX,EQUITY,Basic Materials,Specialty Chemicals,242758151.0,81824063488.0,2026-10-23
+SJM,The J.M. Smucker Company,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Packaged Foods,106823183.0,13884876800.0,2026-10-23
+SLB,SLB Limited,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Equipment & Services,1484143231.0,78748639232.0,2026-10-23
+SMCI,"Super Micro Computer, Inc.",NMS,Nasdaq,EQUITY,Technology,Computer Hardware,656965384.0,21640437760.0,2026-10-23
+SNA,Snap-On Incorporated,NYQ,NYSE/AMEX,EQUITY,Industrials,Tools & Accessories,51727124.0,18467616768.0,2026-10-23
+SNDK,Sandisk Corporation,NMS,Nasdaq,EQUITY,Technology,Computer Hardware,144527564.0,178929467392.0,2026-10-23
+SNPS,"Synopsys, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,191636646.0,82430590976.0,2026-10-23
+SO,Southern Company (The),NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,1150362966.0,106857218048.0,2026-10-23
+SOFI,"SoFi Technologies, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Credit Services,1291570324.0,18876299264.0,2026-10-23
+SOLV,Solventum Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Instruments & Supplies,170223729.0,14538809344.0,2026-10-23
+SPG,"Simon Property Group, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Retail,323551515.0,80339722240.0,2026-10-23
+SPGI,S&P Global Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Financial Data & Stock Exchanges,294800000.0,132751384576.0,2026-10-23
+SPOT,Spotify Technology S.A.,NYQ,NYSE/AMEX,EQUITY,Communication Services,Internet Content & Information,205584205.0,120106401792.0,2026-10-23
+SPY,State Street SPDR S&P 500 ETF T,PCX,NYSE/AMEX,ETF,,,917782016.0,,2026-10-23
+SRE,DBA Sempra,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Diversified,653900348.0,54966861824.0,2026-10-23
+STE,STERIS plc (Ireland),NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,97500110.0,22634649600.0,2026-10-23
+STLD,"Steel Dynamics, Inc.",NMS,Nasdaq,EQUITY,Basic Materials,Steel,143328088.0,34618036224.0,2026-10-23
+STT,State Street Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Asset Management,274701765.0,46103195648.0,2026-10-23
+STX,Seagate Technology Holdings PLC,NMS,Nasdaq,EQUITY,Technology,Computer Hardware,227393014.0,143369011200.0,2026-10-23
+STZ,"Constellation Brands, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Beverages - Brewers,169198487.0,23468013568.0,2026-10-23
+SW,Smurfit WestRock plc,NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Packaging & Containers,524522908.0,21951283200.0,2026-10-23
+SWK,"Stanley Black & Decker, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Tools & Accessories,151016641.0,14986891264.0,2026-10-23
+SWKS,"Skyworks Solutions, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductors,235165549.0,19619862528.0,2026-10-23
+SYF,Synchrony Financial,NYQ,NYSE/AMEX,EQUITY,Financial Services,Credit Services,325370840.0,23960309760.0,2026-10-23
+SYK,Stryker Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,383573046.0,117814460416.0,2026-10-23
+SYY,Sysco Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Food Distribution,491913960.0,40027037696.0,2026-10-23
+T,AT&T Inc.,NYQ,NYSE/AMEX,EQUITY,Communication Services,Telecom Services,6736473433.0,140994396160.0,2026-10-23
+TAP,Molson Coors Beverage Company,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Beverages - Brewers,174117990.0,7683766784.0,2026-10-23
+TDG,Transdigm Group Incorporated,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,55276525.0,61071712256.0,2026-10-23
+TDY,Teledyne Technologies Incorpora,NYQ,NYSE/AMEX,EQUITY,Technology,Scientific & Technical Instruments,46355673.0,28991299584.0,2026-10-23
+TECH,Bio-Techne Corp,NMS,Nasdaq,EQUITY,Healthcare,Biotechnology,156818238.0,11377164288.0,2026-10-23
+TEL,TE Connectivity plc,NYQ,NYSE/AMEX,EQUITY,Technology,Electronic Components,289513228.0,60233224192.0,2026-10-23
+TER,"Teradyne, Inc.",NMS,Nasdaq,EQUITY,Technology,Semiconductor Equipment & Materials,156340750.0,48285843456.0,2026-10-23
+TFC,Truist Financial Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,1221626188.0,59175571456.0,2026-10-23
+TGT,Target Corporation,NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Discount Stores,454296736.0,69398364160.0,2026-10-23
+TJX,"TJX Companies, Inc. (The)",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Apparel Retail,1099974061.0,159562235904.0,2026-10-23
+TKO,"TKO Group Holdings, Inc.",NYQ,NYSE/AMEX,EQUITY,Communication Services,Entertainment,73111098.0,32756910080.0,2026-10-23
+TMO,Thermo Fisher Scientific Inc,NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,369747286.0,249143132160.0,2026-10-23
+TMUS,"T-Mobile US, Inc.",NMS,Nasdaq,EQUITY,Communication Services,Telecom Services,1072671613.0,157189292032.0,2026-10-23
+TPL,Texas Pacific Land Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas E&P,68974683.0,23331375104.0,2026-10-23
+TPR,"Tapestry, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Luxury Goods,198435342.0,21901309952.0,2026-10-23
+TRGP,"Targa Resources, Inc.",NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Midstream,214431021.0,64837509120.0,2026-10-23
+TRMB,Trimble Inc.,NMS,Nasdaq,EQUITY,Technology,Scientific & Technical Instruments,233179848.0,14804588544.0,2026-10-23
+TROW,"T. Rowe Price Group, Inc.",NMS,Nasdaq,EQUITY,Financial Services,Asset Management,213315850.0,22227511296.0,2026-10-23
+TRV,"The Travelers Companies, Inc.",NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,208575022.0,83071262720.0,2026-10-23
+TSCO,Tractor Supply Company,NMS,Nasdaq,EQUITY,Consumer Cyclical,Specialty Retail,521040137.0,17413160960.0,2026-10-23
+TSLA,"Tesla, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Auto Manufacturers,3952730153.0,1471285166080.0,2026-10-23
+TSM,Taiwan Semiconductor Manufactur,NYQ,NYSE/AMEX,EQUITY,Technology,Semiconductors,5186474013.0,2170591248384.0,2026-10-23
+TSN,"Tyson Foods, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Defensive,Farm Products,281792507.0,19947145216.0,2026-10-23
+TT,Trane Technologies plc,NYQ,NYSE/AMEX,EQUITY,Industrials,Building Products & Equipment,220023177.0,97888313344.0,2026-10-23
+TTD,"The Trade Desk, Inc.",NGM,Nasdaq,EQUITY,Communication Services,Advertising Agencies,429686475.0,6146336256.0,2026-10-23
+TTWO,"Take-Two Interactive Software, ",NMS,Nasdaq,EQUITY,Communication Services,Electronic Gaming & Multimedia,186980443.0,38086049792.0,2026-10-23
+TXN,Texas Instruments Incorporated,NMS,Nasdaq,EQUITY,Technology,Semiconductors,913247686.0,259992485888.0,2026-10-23
+TXT,Textron Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Aerospace & Defense,171986917.0,13213754368.0,2026-10-23
+TYL,"Tyler Technologies, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Application,40952274.0,15977119744.0,2026-10-23
+UAL,"United Airlines Holdings, Inc.",NMS,Nasdaq,EQUITY,Industrials,Airlines,324894375.0,31816904704.0,2026-10-23
+UBER,"Uber Technologies, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Application,2042560121.0,136238751744.0,2026-10-23
+UDR,"UDR, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Residential,321264222.0,13166333952.0,2026-10-23
+UHS,"Universal Health Services, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Care Facilities,51687770.0,11014645760.0,2026-10-23
+ULTA,"Ulta Beauty, Inc.",NMS,Nasdaq,EQUITY,Consumer Cyclical,Specialty Retail,42757471.0,26700331008.0,2026-10-23
+UNH,UnitedHealth Group Incorporated,NYQ,NYSE/AMEX,EQUITY,Healthcare,Healthcare Plans,897594847.0,375275421696.0,2026-10-23
+UNP,Union Pacific Corporation,NYQ,NYSE/AMEX,EQUITY,Industrials,Railroads,594075498.0,173986889728.0,2026-10-23
+UPS,"United Parcel Service, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Integrated Freight & Logistics,749349405.0,85979979776.0,2026-10-23
+URI,"United Rentals, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Rental & Leasing Services,62242489.0,68397027328.0,2026-10-23
+USB,U.S. Bancorp,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Regional,1558051446.0,92828704768.0,2026-10-23
+V,Visa Inc.,NYQ,NYSE/AMEX,EQUITY,Financial Services,Credit Services,1704112694.0,765810769920.0,2026-10-23
+VEEV,Veeva Systems Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Health Information Services,161908850.0,52303036416.0,2026-10-23
+VICI,VICI Properties Inc.,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Diversified,1101077562.0,26161602560.0,2026-10-23
+VLO,Valero Energy Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Refining & Marketing,287927461.0,120722227200.0,2026-10-23
+VLTO,Veralto Corp,NYQ,NYSE/AMEX,EQUITY,Industrials,Pollution & Treatment Controls,243793344.0,25434959872.0,2026-10-23
+VMC,Vulcan Materials Company (Holdi,NYQ,NYSE/AMEX,EQUITY,Basic Materials,Building Materials,129578739.0,33909458944.0,2026-10-23
+VRSK,"Verisk Analytics, Inc.",NMS,Nasdaq,EQUITY,Industrials,Consulting Services,130156012.0,25494960128.0,2026-10-23
+VRSN,"VeriSign, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,89700000.0,26938703872.0,2026-10-23
+VRT,"Vertiv Holdings, LLC",NYQ,NYSE/AMEX,EQUITY,Industrials,Electrical Equipment & Parts,384988173.0,74810900480.0,2026-10-23
+VRTX,Vertex Pharmaceuticals Incorpor,NMS,Nasdaq,EQUITY,Healthcare,Biotechnology,253460924.0,132795785216.0,2026-10-23
+VST,Vistra Corp.,NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Independent Power Producers,335635195.0,47042629632.0,2026-10-23
+VTR,"Ventas, Inc.",NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Healthcare Facilities,512946359.0,44523745280.0,2026-10-23
+VTRS,Viatris Inc.,NMS,Nasdaq,EQUITY,Healthcare,Drug Manufacturers - Specialty & Generic,1148590864.0,20674635776.0,2026-10-23
+VZ,Verizon Communications Inc.,NYQ,NYSE/AMEX,EQUITY,Communication Services,Telecom Services,4154775202.0,185552257024.0,2026-10-23
+WAB,Westinghouse Air Brake Technolo,NYQ,NYSE/AMEX,EQUITY,Industrials,Railroads,168910851.0,46002872320.0,2026-10-23
+WAT,Waters Corporation,NYQ,NYSE/AMEX,EQUITY,Healthcare,Diagnostics & Research,98185855.0,44543979520.0,2026-10-23
+WBD,"Warner Bros. Discovery, Inc. - ",NMS,Nasdaq,EQUITY,Communication Services,Entertainment,2507136702.0,77595885568.0,2026-10-23
+WDAY,"Workday, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Application,196000000.0,50607591424.0,2026-10-23
+WDC,Western Digital Corporation,NMS,Nasdaq,EQUITY,Technology,Computer Hardware,374323269.0,128643678208.0,2026-10-23
+WEC,"WEC Energy Group, Inc.",NYQ,NYSE/AMEX,EQUITY,Utilities,Utilities - Regulated Electric,325849383.0,36198604800.0,2026-10-23
+WELL,Welltower Inc.,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Healthcare Facilities,720572011.0,171006164992.0,2026-10-23
+WFC,Wells Fargo & Company,NYQ,NYSE/AMEX,EQUITY,Financial Services,Banks - Diversified,3001638935.0,247305027584.0,2026-10-23
+WM,"Waste Management, Inc.",NYQ,NYSE/AMEX,EQUITY,Industrials,Waste Management,399715184.0,95683829760.0,2026-10-23
+WMB,"Williams Companies, Inc. (The)",NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Midstream,1223167472.0,87701102592.0,2026-10-23
+WMT,Walmart Inc.,NMS,Nasdaq,EQUITY,Consumer Defensive,Discount Stores,7958079155.0,954094059520.0,2026-10-23
+WRB,W.R. Berkley Corporation,NYQ,NYSE/AMEX,EQUITY,Financial Services,Insurance - Property & Casualty,371227529.0,27222114304.0,2026-10-23
+WSM,"Williams-Sonoma, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Specialty Retail,117779173.0,29735708672.0,2026-10-23
+WST,"West Pharmaceutical Services, I",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Instruments & Supplies,70375762.0,27597854720.0,2026-10-23
+WTW,Willis Towers Watson Public Lim,NMS,Nasdaq,EQUITY,Financial Services,Insurance Brokers,92871937.0,30184308736.0,2026-10-23
+WY,Weyerhaeuser Company,NYQ,NYSE/AMEX,EQUITY,Real Estate,REIT - Specialty,720736000.0,14047144960.0,2026-10-23
+WYNN,"Wynn Resorts, Limited",NMS,Nasdaq,EQUITY,Consumer Cyclical,Resorts & Casinos,102973891.0,7489291264.0,2026-10-23
+XEL,Xcel Energy Inc.,NMS,Nasdaq,EQUITY,Utilities,Utilities - Regulated Electric,624634306.0,48752709632.0,2026-10-23
+XOM,ExxonMobil Holdings Corporation,NYQ,NYSE/AMEX,EQUITY,Energy,Oil & Gas Integrated,4111911960.0,753343397888.0,2026-10-23
+XYL,Xylem Inc.,NYQ,NYSE/AMEX,EQUITY,Industrials,Specialty Industrial Machinery,233486812.0,25389355008.0,2026-10-23
+XYZ,"Block, Inc.",NYQ,NYSE/AMEX,EQUITY,Technology,Software - Infrastructure,540816000.0,45936787456.0,2026-10-23
+YUM,"Yum! Brands, Inc.",NYQ,NYSE/AMEX,EQUITY,Consumer Cyclical,Restaurants,272901085.0,40853291008.0,2026-10-23
+ZBH,"Zimmer Biomet Holdings, Inc.",NYQ,NYSE/AMEX,EQUITY,Healthcare,Medical Devices,190737689.0,18799106048.0,2026-10-23
+ZBRA,Zebra Technologies Corporation,NMS,Nasdaq,EQUITY,Technology,Communication Equipment,47310660.0,18283204608.0,2026-10-23
+ZS,"Zscaler, Inc.",NMS,Nasdaq,EQUITY,Technology,Software - Infrastructure,163054698.0,41603407872.0,2026-10-23
+ZTS,Zoetis Inc.,NYQ,NYSE/AMEX,EQUITY,Healthcare,Drug Manufacturers - Specialty & Generic,413223602.0,33483509760.0,2026-10-23
+^VIX,CBOE Volatility Index,CXI,Other,INDEX,,,,,2026-10-23
