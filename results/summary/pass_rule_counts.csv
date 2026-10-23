@@ -22,7 +22,7 @@ Price vs SMA 200,426,66,4,0,11
 Price vs SMA 50,433,68,6,0,0
 ROC 12,430,68,9,0,0
 RSI 14,433,68,6,0,0
-Resistance bounce,286,43,5,0,156
+Resistance bounce,285,44,5,0,156
 Rising wedge,0,0,0,0,58
 Rounding bottom,207,33,0,0,267
 Rounding top,189,34,2,0,282
@@ -35,9 +35,9 @@ Triple bottom,0,0,0,0,250
 Triple top,0,0,0,0,209
 Tsunami (stock P/C - open-interest substitute),0,0,0,0,380
 Tsunami (stock P/C),0,0,0,0,483
-[GEX] Call-wall rejection,65,0,0,5,327
+[GEX] Call-wall rejection,350,0,0,32,116
 [GEX] Flip cross,358,0,0,6,121
-[GEX] Put-wall hold,23,0,0,2,262
+[GEX] Put-wall hold,339,0,0,41,122
 [LMW] BBOT,2,0,0,0,489
 [LMW] BTOP,3,0,0,0,486
 [LMW] DBOT-LMW,165,0,0,10,330
