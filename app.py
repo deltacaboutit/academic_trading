@@ -1,6 +1,7 @@
 """Academic Trading - browser app.
 
 Start it with run_windows.bat (or:  streamlit run app.py).
+It also runs on Streamlit Community Cloud (free); see README section 2b.
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from plotly.subplots import make_subplots
 
 from atrade import data as D
 from atrade.analysis import analyze
-from atrade.config import DEFAULTS, load_settings, load_watchlist, save_settings, save_watchlist
+from atrade.config import DEFAULTS, ON_CLOUD, load_settings, load_watchlist, save_settings, save_watchlist
 from atrade.validation import bernoulli_test
 
 st.set_page_config(page_title="Academic Trading", page_icon="📈", layout="wide")
@@ -81,6 +82,9 @@ with st.sidebar:
                         help="Ignore today's saved copy and download fresh prices.")
     st.caption("Prices: Yahoo Finance, adjusted for splits and dividends. "
                "Ratings use closing prices, so check after 4:00 pm New York time.")
+    if ON_CLOUD:
+        st.info("**Online version.** Changes you make to settings or the watch list last until you close "
+                "this page. The app picks up new data a few minutes after GitHub is updated.")
 
 if go_btn or refresh or "res" not in st.session_state or st.session_state.get("ticker") != ticker:
     if ticker:
@@ -462,8 +466,10 @@ with tabs[4]:
                 "'Research run (all stocks)' workflow on GitHub to test every stock.")
     if res["ticker"] != "DEMO":
         cB, cBtn = st.columns([1, 2])
-        Bn = cB.number_input("Histories per model", 20, 1000, int(S.get("boot_B", 500)), 20,
-                             help="The book used 100; Brock et al. and the framework use 500 (about 7 minutes per model).")
+        Bn = cB.number_input("Histories per model", 20, 1000, 100 if ON_CLOUD else int(S.get("boot_B", 500)), 20,
+                             help="The book used 100; Brock et al. and the framework use 500 (about 7 minutes per model)."
+                                  + (" The free online server is slower and stops long jobs, so it starts at 100."
+                                     if ON_CLOUD else ""))
         if cBtn.button("Run full validation for this stock", type="primary"):
             from atrade import bootstrap as BS
             from atrade.results import save_bootstrap, save_table
@@ -479,7 +485,9 @@ with tabs[4]:
             rp = random_series_patterns(closes, S)
             save_table(rp.assign(ticker=res["ticker"]), f"random_patterns/{res['ticker'].replace('^', '_')}.csv")
             prog.empty()
-            st.success("Saved to the results folder. To share it, commit results/ to GitHub.")
+            st.success("Done. The online server forgets this result when it restarts; for a lasting result, run "
+                       "the 'Research run (all stocks)' workflow on GitHub." if ON_CLOUD else
+                       "Saved to the results folder. To share it, commit results/ to GitHub.")
             st.cache_data.clear(); st.session_state.pop("res", None); st.rerun()
 
     st.subheader("Step 4 – do the patterns appear in random prices too?")
@@ -651,11 +659,13 @@ with tabs[8]:
 
 # =========================================================== WATCH LIST ====
 with tabs[7]:
-    wl_text = st.text_area("Tickers (one per line or separated by commas)", "\n".join(load_watchlist()), height=130)
+    wl_text = st.text_area("Tickers (one per line or separated by commas)",
+                           "\n".join(st.session_state.get("watchlist") or load_watchlist()), height=130)
     tick = [t.strip().upper() for t in wl_text.replace(",", "\n").splitlines() if t.strip()]
     b1, b2 = st.columns(2)
     if b1.button("Save list"):
-        save_watchlist(tick); st.success("Saved.")
+        st.session_state.watchlist = tick; save_watchlist(tick)
+        st.success("Saved for this visit." if ON_CLOUD else "Saved.")
     rate_all = b2.button("Rate all", type="primary")
     if rate_all:
         out, results = [], {}
@@ -735,7 +745,9 @@ with tabs[9]:
                 st.info("No options data yet. Run the one-time import described in the README.")
         except Exception as e:
             st.error(f"Could not read options_data: {e}")
-        if st.button("Get the latest data from GitHub", help="Runs 'git pull' in this folder."):
+        if ON_CLOUD:
+            st.caption("This online copy updates itself a few minutes after new data reaches GitHub.")
+        elif st.button("Get the latest data from GitHub", help="Runs 'git pull' in this folder."):
             import subprocess
             r = subprocess.run(["git", "pull", "--ff-only"], cwd=Path(__file__).parent, capture_output=True, text=True)
             (st.success if r.returncode == 0 else st.error)((r.stdout + r.stderr).strip() or "Done.")
@@ -795,6 +807,8 @@ with tabs[10]:
 with tabs[11]:
     st.write("Starting values come from the framework. The books warn that tuning settings until the past looks "
              "good ('data snooping') makes results look better than they are, so change these sparingly.")
+    if ON_CLOUD:
+        st.caption("Online version: your changes apply until you close this page, and don't affect other visitors.")
     with st.form("settings_form"):
         a1, a2, a3 = st.columns(3)
         with a1:

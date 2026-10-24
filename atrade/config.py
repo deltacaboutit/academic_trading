@@ -2,12 +2,15 @@
 
 Every number here comes from the framework design document unless it is
 marked "tool choice". Users can change these on the Settings tab; changes are
-saved to data/settings.json.
+saved to data/settings.json. On Streamlit Community Cloud (the free online
+version) nothing is saved to disk: each visitor's changes last for their own
+browser session only, so one visitor cannot change another's settings.
 """
 from __future__ import annotations
 
 import copy
 import json
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -16,6 +19,8 @@ CACHE_DIR = DATA_DIR / "prices"
 SENTIMENT_DIR = DATA_DIR / "sentiment"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 WATCHLIST_FILE = DATA_DIR / "watchlist.json"
+# Streamlit Community Cloud runs apps from /mount/src. ATRADE_CLOUD=1 forces cloud mode (for testing).
+ON_CLOUD = os.environ.get("ATRADE_CLOUD") == "1" or Path("/mount/src").is_dir()
 
 DEFAULTS: dict = {
     # ---- Data -------------------------------------------------------------
@@ -86,7 +91,7 @@ DEFAULTS: dict = {
 def load_settings() -> dict:
     s = copy.deepcopy(DEFAULTS)
     try:
-        if SETTINGS_FILE.exists():
+        if not ON_CLOUD and SETTINGS_FILE.exists():
             saved = json.loads(SETTINGS_FILE.read_text())
             for k, v in saved.items():
                 if k in s:
@@ -97,13 +102,15 @@ def load_settings() -> dict:
 
 
 def save_settings(s: dict) -> None:
+    if ON_CLOUD:
+        return
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     SETTINGS_FILE.write_text(json.dumps(s, indent=2))
 
 
 def load_watchlist() -> list[str]:
     try:
-        if WATCHLIST_FILE.exists():
+        if not ON_CLOUD and WATCHLIST_FILE.exists():
             return [t.upper() for t in json.loads(WATCHLIST_FILE.read_text())]
     except Exception:
         pass
@@ -111,5 +118,7 @@ def load_watchlist() -> list[str]:
 
 
 def save_watchlist(tickers: list[str]) -> None:
+    if ON_CLOUD:
+        return
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     WATCHLIST_FILE.write_text(json.dumps([t.upper() for t in tickers], indent=2))
