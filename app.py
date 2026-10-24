@@ -252,16 +252,23 @@ with tabs[0]:
 
 # ================================================================ CHART ====
 with tabs[1]:
-    cc = st.columns([2, 1, 1, 1, 1, 1, 1])
+    cc = st.columns([2, 1, 1, 1, 1, 1])
     span = cc[0].radio("Period", ["6 months", "1 year", "2 years", "5 years", "All"], index=1, horizontal=True)
     show_zones = cc[1].checkbox("Zones", True)
     show_pat = cc[2].checkbox("Patterns", True)
-    show_ind = cc[3].checkbox("Indicator signals", False)
-    show_bb = cc[4].checkbox("Bollinger", False)
-    show_tp = cc[5].checkbox("Turning points", False)
-    show_gex = cc[6].checkbox("GEX levels", res.get("gex") is not None, disabled=res.get("gex") is None,
+    show_bb = cc[3].checkbox("Bollinger", False)
+    show_tp = cc[4].checkbox("Turning points", False)
+    show_gex = cc[5].checkbox("GEX levels", res.get("gex") is not None, disabled=res.get("gex") is None,
                               help="Gamma flip, call wall and put wall (add-on, not from the books). Walls are the strikes with the "
                                    "largest call / put gamma; the flip is where total gamma changes sign as the price moves.")
+    IND_KINDS = ("crossover", "breakout", "gauge")
+    ind_rules = sorted({sg.rule for sg in res["signals"] if sg.kind in IND_KINDS})
+    ic = st.columns([2, 1])
+    ind_pick = ic[0].selectbox("Indicator signals", ["None", "All indicators"] + ind_rules, index=1,
+                               help="Show buy and sell signals from every indicator, or pick one indicator to see only its signals.")
+    ind_strong = ic[1].toggle("Strongest only", True,
+                              help="Only signals on days when volume was at least "
+                                   f"{S['rv_full']:g}× its 50-day average. These count at full strength in the rating.")
     days = {"6 months": 126, "1 year": 252, "2 years": 504, "5 years": 1260, "All": n}[span]
     a = max(0, n - days)
     x = df.index[a:]
@@ -331,7 +338,11 @@ with tabs[1]:
                                          line=dict(color=col, dash="dash", width=1), showlegend=False,
                                          hovertext="Price target until the time limit"), 1, 1)
     # zone bounces and (optionally) indicator signals
-    marks = [sg for sg in res["signals"] if sg.idx >= a and (sg.kind == "zone" or (show_ind and sg.kind in ("crossover", "breakout", "gauge")))]
+    def ind_shown(sg):
+        if ind_pick == "None" or sg.kind not in IND_KINDS or ind_pick not in ("All indicators", sg.rule):
+            return False
+        return not ind_strong or not sg.vol_adjust or np.nan_to_num(res["rv"][sg.idx]) >= S["rv_full"]
+    marks = [sg for sg in res["signals"] if sg.idx >= a and (sg.kind == "zone" or ind_shown(sg))]
     for d, sym, col in ((1, "triangle-up", BUY_DARK), (-1, "triangle-down", SELL_DARK)):
         q = [sg for sg in marks if sg.direction == d]
         if q:
@@ -339,7 +350,7 @@ with tabs[1]:
                                      y=[df["Low"].iloc[sg.idx] - gap if d > 0 else df["High"].iloc[sg.idx] + gap for sg in q],
                                      mode="markers", marker=dict(symbol=sym, size=11, color=col, line=dict(width=1.5, color="white")),
                                      name="Buy signals" if d > 0 else "Sell signals",
-                                     hovertext=[f"{sg.rule}: {sg.text}" for sg in q]), 1, 1)
+                                     hovertext=[f"{sg.rule}: {sg.text} (volume {np.nan_to_num(res['rv'][sg.idx]):.1f}× average)" for sg in q]), 1, 1)
     rv = res["rv"]
     vcol = [GREEN if v >= S["rv_full"] else BLUE if v >= S["rv_half"] else "#afb8c1" for v in np.nan_to_num(rv[a:])]
     fig.add_trace(go.Bar(x=x, y=df["Volume"].iloc[a:], marker_color=vcol, name="Volume", showlegend=False), 2, 1)
@@ -358,7 +369,9 @@ with tabs[1]:
     st.plotly_chart(fig, config={"displayModeBar": "hover"})
     st.caption("Volume bars: green = at least 1.5× the 50-day average (signal confirmed), blue = 1.0–1.5× (half weight), "
                "grey = below average (signal not confirmed). Shaded bands are today's support/resistance zones. "
-               "Stars mark chart-pattern breaks and open circles mark turning points; the dashed line is the price target until the time limit.")
+               "Stars mark chart-pattern breaks and open circles mark turning points; the dashed line is the price target until the time limit. "
+               "Triangles are buy and sell signals; 'Strongest only' keeps the indicator signals that came with "
+               "green (heavy) volume.")
 
 # ============================================================== SIGNALS ====
 with tabs[2]:
