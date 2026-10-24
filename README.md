@@ -1,6 +1,6 @@
 # Academic Trading — personal stock analysis tool (version 1)
 
-A program that runs on your own Windows computer and opens in your web browser. For any US stock, it gives a **Buy**, **Sell** or **Hold** rating, built from the rules in your *Quantitative Trading Tool — Framework Design* (rev. Oct 16, 2026). It also shows the reasons for the rating, an exit plan, and a back-test of every rule.
+A program that runs on your own Windows computer and opens in your web browser. It can also be put online for free (section 2b). For any US stock, it gives a **Buy**, **Sell** or **Hold** rating, built from the rules in your *Quantitative Trading Tool — Framework Design* (rev. Oct 16, 2026). It also shows the reasons for the rating, an exit plan, and a back-test of every rule.
 
 ---
 
@@ -46,6 +46,41 @@ A program that runs on your own Windows computer and opens in your web browser. 
 | Options data | Which sentiment systems are active (and whether each uses real volume or the open-interest substitute), the state of the options data store, a button to get the latest data, and importing extra history files. |
 | Data quality | What the cleaning step found and changed. |
 | Settings | Weights, cut-offs, filters, costs and more. Values are saved in `data\settings.json`. |
+
+## 2b. Putting the tool online for free (Streamlit Community Cloud)
+
+You can also run the tool as a website, so you can open it on any computer or phone without installing anything.
+Streamlit Community Cloud hosts Streamlit apps like this one for free, straight from this GitHub repository.
+
+**Deploy it (about 5 minutes, one time only):**
+
+1. Go to <https://share.streamlit.io> and choose **Continue with GitHub**. Allow Streamlit to see your repositories.
+2. Click **Create app**, then choose to deploy an app from GitHub.
+3. Fill in the form:
+   - **Repository:** `deltacaboutit/academic_trading`
+   - **Branch:** `main`
+   - **Main file path:** `app.py`
+   - **App URL:** any name you like, for example `academic-trading`.
+4. Open **Advanced settings** and choose **Python 3.12**. No secrets are needed.
+5. Click **Deploy**. The first start installs the libraries and takes a few minutes. After that, the tool opens at
+   your new web address.
+
+**Good to know about the online version:**
+
+- **It updates itself.** Every time GitHub changes (new code, or the daily options data), the online copy picks up the
+  change within a few minutes. There is no *Get the latest data* button online, because it isn't needed.
+- **Settings and the watch list are per visit.** Changes you make on the Settings or Watch list tab last until you
+  close the page, and never affect other visitors. To change the starting values for everyone, edit
+  `atrade/config.py` on GitHub.
+- **Full validation is slower.** The free server is small and stops very long jobs, so *Run full validation* starts at
+  100 artificial histories instead of 500, and its result is forgotten when the server restarts. For lasting results,
+  use the *Research run (all stocks)* workflow on GitHub (see the All stocks tab).
+- **Prices.** If the server cannot reach Yahoo Finance, the tool uses the prices saved in `price_data/` and says so
+  under the stock's name.
+- **Sleeping.** If nobody opens the app for a while, Streamlit puts it to sleep. The next visitor sees a button to
+  wake it up, which takes about a minute.
+- **Who can see it.** Anyone with the link can open a public app. You can limit it to chosen email addresses in the
+  app's **Settings → Sharing** on share.streamlit.io.
 
 ## 3. Options data (Framework 6) and GEX
 
