@@ -24,6 +24,9 @@ from atrade.validation import bernoulli_test
 st.set_page_config(page_title="Academic Trading", page_icon="📈", layout="wide")
 
 GREEN, RED, GREY, BLUE, AMBER = "#1a7f37", "#cf222e", "#6e7781", "#0969da", "#bf8700"
+# chart tab: candles are pale so markers and pattern lines (dark shades) stand out on top of them
+CANDLE_UP, CANDLE_DN = "#7cc794", "#ee8e92"
+BUY_DARK, SELL_DARK = "#0b5d2a", "#a40e26"
 RCOL = {"BUY": GREEN, "SELL": RED, "HOLD": GREY}
 GROUP_NAME = {"trend": "Trend", "reversal": "Reversal", "sentiment": "Sentiment", "gex": "GEX add-on"}
 
@@ -264,10 +267,13 @@ with tabs[1]:
     x = df.index[a:]
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.62, 0.18, 0.20], vertical_spacing=0.03)
     fig.add_trace(go.Candlestick(x=x, open=df["Open"].iloc[a:], high=df["High"].iloc[a:], low=df["Low"].iloc[a:],
-                                 close=df["Close"].iloc[a:], name="Price", increasing_line_color=GREEN,
-                                 decreasing_line_color=RED, showlegend=False), 1, 1)
+                                 close=df["Close"].iloc[a:], name="Price", increasing=dict(line=dict(color=CANDLE_UP, width=1), fillcolor=CANDLE_UP),
+                                 decreasing=dict(line=dict(color=CANDLE_DN, width=1), fillcolor=CANDLE_DN),
+                                 showlegend=False), 1, 1)
     from atrade.indicators import sma
     c = df["Close"].to_numpy(float)
+    lo_v, hi_v = df["Low"].iloc[a:].min(), df["High"].iloc[a:].max()
+    gap = 0.04 * (hi_v - lo_v)  # how far signal markers sit from the candle, so they don't cover it
     for w, col in ((50, AMBER), (200, BLUE)):
         fig.add_trace(go.Scatter(x=x, y=sma(c, w)[a:], name=f"{w}-day average", line=dict(color=col, width=1.2)), 1, 1)
     if show_bb:
@@ -275,12 +281,15 @@ with tabs[1]:
         fig.add_trace(go.Scatter(x=x, y=bb["up"][a:], name="Bollinger upper", line=dict(color=GREY, width=0.8, dash="dot")), 1, 1)
         fig.add_trace(go.Scatter(x=x, y=bb["low"][a:], name="Bollinger lower", line=dict(color=GREY, width=0.8, dash="dot")), 1, 1)
     if show_zones:
-        lo_v, hi_v = df["Low"].iloc[a:].min(), df["High"].iloc[a:].max()
-        for (zlo, zhi, lvl, cnt) in res["zones_now"]:
+        last = None
+        for (zlo, zhi, lvl, cnt) in sorted(res["zones_now"], key=lambda z: z[2]):
             if zhi >= lo_v * 0.95 and zlo <= hi_v * 1.05:
                 fig.add_hrect(y0=zlo, y1=zhi, fillcolor=BLUE, opacity=0.10, line_width=0, row=1, col=1)
-                fig.add_annotation(x=x[-1], y=lvl, text=f"zone {lvl:,.2f} ({cnt} pts)", showarrow=False,
-                                   xanchor="right", font=dict(size=10, color=BLUE), row=1, col=1)
+                # nudge a label up when it would sit on top of the one just below it
+                ys = 14 if last is not None and lvl - last < 0.04 * (hi_v - lo_v) else 0
+                last = lvl
+                fig.add_annotation(x=x[-1], y=lvl, yshift=ys, text=f"zone {lvl:,.2f} ({cnt} pts)", showarrow=False,
+                                   xanchor="right", font=dict(size=10, color=BLUE), bgcolor="rgba(255,255,255,0.8)", row=1, col=1)
     if show_gex and res.get("gex") is not None:
         gx = res["gex"]
         for key, name, col, dash in (("call_wall_price", "Call wall", RED, "dash"), ("put_wall_price", "Put wall", GREEN, "dash"),
@@ -291,24 +300,31 @@ with tabs[1]:
         from atrade.turning_points import rolling_window
         tp = rolling_window(c, int(S["w_hs"]))
         tp = tp[tp["idx"] >= a]
-        for k, sym, col in (("P", "triangle-down", RED), ("T", "triangle-up", GREEN)):
+        for k, sym, col in (("P", "circle-open", SELL_DARK), ("T", "circle-open", BUY_DARK)):
             q = tp[tp["kind"] == k]
             fig.add_trace(go.Scatter(x=df.index[q["idx"]], y=q["price"], mode="markers", name=f"{'Peaks' if k == 'P' else 'Troughs'} (w={S['w_hs']})",
-                                     marker=dict(symbol=sym, size=7, color=col, opacity=0.6)), 1, 1)
+                                     marker=dict(symbol=sym, size=7, color=col, line=dict(width=1.5))), 1, 1)
     if show_pat:
         for sg in res["patterns"]:
             if sg.idx < a:
                 continue
-            col = GREEN if sg.direction > 0 else RED
+            col = BUY_DARK if sg.direction > 0 else SELL_DARK
             pts = [p for p in sg.points if p[2] != "prior"]
-            fig.add_trace(go.Scatter(x=[df.index[p[0]] for p in pts], y=[p[1] for p in pts], mode="lines+markers",
-                                     line=dict(color=col, width=2), marker=dict(size=6), name=sg.rule,
+            px, py = [df.index[p[0]] for p in pts], [p[1] for p in pts]
+            # a wide white line underneath gives the pattern line a halo, so it reads over the candles
+            fig.add_trace(go.Scatter(x=px, y=py, mode="lines", line=dict(color="white", width=6),
+                                     hoverinfo="skip", showlegend=False), 1, 1)
+            fig.add_trace(go.Scatter(x=px, y=py, mode="lines+markers", line=dict(color=col, width=2.5),
+                                     marker=dict(size=7, line=dict(width=1.5, color="white")), name=sg.rule,
                                      hovertext=sg.text, showlegend=False), 1, 1)
-            fig.add_trace(go.Scatter(x=[df.index[sg.idx]], y=[c[sg.idx]], mode="markers+text", text=[sg.rule],
-                                     textposition="top center" if sg.direction > 0 else "bottom center",
-                                     textfont=dict(size=10, color=col),
-                                     marker=dict(symbol="star", size=13, color=col), showlegend=False,
-                                     hovertext=f"{sg.text} Target {sg.target:,.2f}"), 1, 1)
+            fig.add_trace(go.Scatter(x=[df.index[sg.idx]], y=[c[sg.idx]], mode="markers",
+                                     marker=dict(symbol="star", size=16, color=col, line=dict(width=1.5, color="white")),
+                                     showlegend=False, hovertext=f"{sg.text} Target {sg.target:,.2f}"), 1, 1)
+            up = sg.direction > 0
+            fig.add_annotation(x=df.index[sg.idx], y=c[sg.idx], text=sg.rule, showarrow=True, arrowcolor=col,
+                               arrowwidth=1, ax=0, ay=-34 if up else 34, font=dict(size=11, color=col),
+                               bgcolor="rgba(255,255,255,0.9)", bordercolor=col, borderwidth=1, borderpad=3,
+                               row=1, col=1)
             if sg.target is not None and sg.time_limit is not None:
                 tl = min(sg.time_limit, n - 1)
                 fig.add_trace(go.Scatter(x=[df.index[sg.idx], df.index[tl]], y=[sg.target, sg.target], mode="lines",
@@ -316,12 +332,12 @@ with tabs[1]:
                                          hovertext="Price target until the time limit"), 1, 1)
     # zone bounces and (optionally) indicator signals
     marks = [sg for sg in res["signals"] if sg.idx >= a and (sg.kind == "zone" or (show_ind and sg.kind in ("crossover", "breakout", "gauge")))]
-    for d, sym, col in ((1, "triangle-up", GREEN), (-1, "triangle-down", RED)):
+    for d, sym, col in ((1, "triangle-up", BUY_DARK), (-1, "triangle-down", SELL_DARK)):
         q = [sg for sg in marks if sg.direction == d]
         if q:
             fig.add_trace(go.Scatter(x=[df.index[sg.idx] for sg in q],
-                                     y=[df["Low"].iloc[sg.idx] * 0.985 if d > 0 else df["High"].iloc[sg.idx] * 1.015 for sg in q],
-                                     mode="markers", marker=dict(symbol=sym, size=9, color=col, line=dict(width=1, color="white")),
+                                     y=[df["Low"].iloc[sg.idx] - gap if d > 0 else df["High"].iloc[sg.idx] + gap for sg in q],
+                                     mode="markers", marker=dict(symbol=sym, size=11, color=col, line=dict(width=1.5, color="white")),
                                      name="Buy signals" if d > 0 else "Sell signals",
                                      hovertext=[f"{sg.rule}: {sg.text}" for sg in q]), 1, 1)
     rv = res["rv"]
@@ -332,16 +348,17 @@ with tabs[1]:
     for lvl in (S["rsi_low"], S["rsi_high"]):
         fig.add_hline(y=lvl, line=dict(color=GREY, dash="dot", width=1), row=3, col=1)
     fig.update_layout(height=760, margin=dict(l=10, r=10, t=10, b=10), xaxis_rangeslider_visible=False,
-                      legend=dict(orientation="h", y=1.02), plot_bgcolor="white", hovermode="x unified")
+                      legend=dict(orientation="h", yanchor="bottom", y=1.01, x=0, font=dict(size=11)),
+                      plot_bgcolor="white", hovermode="x unified")
     fig.update_yaxes(title_text="Price", row=1, col=1); fig.update_yaxes(title_text="Volume", row=2, col=1)
     fig.update_yaxes(title_text="RSI", row=3, col=1, range=[0, 100])
     fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])], gridcolor="#eaeef2",
                      range=[x[0] - pd.Timedelta(days=2), x[-1] + pd.Timedelta(days=5)])
     fig.update_yaxes(gridcolor="#eaeef2")
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, config={"displayModeBar": "hover"})
     st.caption("Volume bars: green = at least 1.5× the 50-day average (signal confirmed), blue = 1.0–1.5× (half weight), "
                "grey = below average (signal not confirmed). Shaded bands are today's support/resistance zones. "
-               "Stars mark chart-pattern breaks; the dashed line is the price target until the time limit.")
+               "Stars mark chart-pattern breaks and open circles mark turning points; the dashed line is the price target until the time limit.")
 
 # ============================================================== SIGNALS ====
 with tabs[2]:
