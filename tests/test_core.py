@@ -133,7 +133,8 @@ def test_no_look_ahead(cut):
     def run(d):
         c = d["Close"].to_numpy(float)
         st = trend_state(c, S)
-        out = trend_signals(d, S) + gauge_signals(c, S) + zone_analysis(c, S)[0] + all_patterns(c, S, st)
+        out = trend_signals(d, S) + gauge_signals(c, S) + zone_analysis(c, S)[0]
+        out += all_patterns(c, S, st, d["High"].to_numpy(float), d["Low"].to_numpy(float))
         out += sentiment_signals({k: v[:len(d)] for k, v in sent.items()}, d, S)[0]
         return st, sorted((x.rule, x.idx, x.direction) for x in out if x.idx <= cut)
 
@@ -151,6 +152,67 @@ def test_bull_flag_detected():
     g = sigs[0]
     assert g.idx >= 49 + S["w_flag"] and g.direction == 1
     assert g.target == pytest.approx(g.line_value(g.idx) + (100 - 50))
+
+
+@pytest.mark.parametrize("knots,mirror,rule,d,target", [
+    ([(0, 70), (10, 100), (25, 80), (40, 100.5), (55, 85), (70, 99.8), (80, 90), (100, 115)], False,
+     "Ascending triangle", +1, 100.5 + (100.5 - 77.5)),            # flat top 100.5; rising line is 77.5 on day 10
+    ([(0, 70), (10, 100), (25, 80), (40, 100.5), (55, 85), (70, 99.8), (80, 90), (100, 115)], True,
+     "Descending triangle", -1, 200 - (100.5 + (100.5 - 77.5))),   # the same shape upside down
+    ([(0, 80), (10, 110), (25, 100), (40, 110.5), (55, 100.5), (70, 109.8), (78, 103), (95, 120)], False,
+     "Rectangle", +1, 110.5 + (110.5 - 100)),
+])
+def test_triangles_and_rectangle_detected(knots, mirror, rule, d, target):
+    from atrade.patterns import triangles_rectangles
+    p = _path(knots)
+    if mirror:
+        p = 200 - p
+    sigs = [x for x in triangles_rectangles(p, S, np.zeros(len(p))) if x.rule == rule]
+    assert len(sigs) == 1, f"{rule} not found exactly once"
+    g = sigs[0]
+    assert g.direction == d and g.idx >= 70 + S["w_rect"]          # only after the last turning point is confirmed
+    assert (p[g.idx] - g.line_value(g.idx)) * d > 0                 # the close is beyond the broken line
+    assert g.target == pytest.approx(target)
+
+
+def test_symmetrical_triangle_needs_converging_lines():
+    from atrade.patterns import triangles_rectangles
+    p = _path([(0, 70), (10, 130), (25, 80), (40, 123), (55, 87), (70, 116), (78, 100), (95, 125)])
+    sigs = triangles_rectangles(p, S, np.zeros(len(p)))
+    assert [x.rule for x in sigs] == ["Symmetrical triangle"] and sigs[0].direction == +1
+    q = _path([(0, 70), (10, 130), (25, 80), (40, 130.5), (55, 80.5), (70, 129.8), (78, 100), (95, 140)])
+    assert not [x for x in triangles_rectangles(q, S, np.zeros(len(q))) if "triangle" in x.rule]
+
+
+def test_cup_and_handle_detected():
+    from atrade.patterns import cup_and_handle
+    t = np.arange(0, 81)
+    cup = 100 - 25 * np.sin(np.pi * t / 80)                       # round cup, 25% deep
+    p = np.concatenate([np.linspace(85, 99, 15), [100.5], cup[1:-1], [100],
+                        np.linspace(99, 94, 8)[1:], np.linspace(94, 105, 10)[1:]])
+    sigs = cup_and_handle(p, S, np.zeros(len(p)))
+    assert len(sigs) == 1
+    g = sigs[0]
+    assert g.direction == +1 and p[g.idx] > 100 and p[g.idx - 1] <= 100
+    assert g.target == pytest.approx(100 + (100 - 75))             # right rim plus the cup's depth
+    v = np.concatenate([np.linspace(85, 99, 15), [100.5], np.linspace(100, 75, 41)[1:], np.linspace(75, 100, 40)[1:],
+                        np.linspace(99, 94, 8)[1:], np.linspace(94, 105, 10)[1:]])
+    assert not cup_and_handle(v, S, np.zeros(len(v)))              # a V-shaped cup is not round enough
+
+
+def test_island_top_and_bottom_detected():
+    from atrade.patterns import all_patterns, islands
+    c = np.r_[np.linspace(80, 100, 30), [104, 105, 104.5], np.linspace(98, 90, 10)]
+    h, lo = c + 0.5, c - 0.5
+    top = islands(h, lo, c, S, np.zeros(len(c)))
+    assert [(x.rule, x.direction, x.idx) for x in top] == [("Island top", -1, 33)]
+    assert top[0].target == pytest.approx(103.5 - (105.5 - 103.5))  # island edge minus the island's height
+    bot = islands(200 - lo, 200 - h, 200 - c, S, np.zeros(len(c)))
+    assert [(x.rule, x.direction, x.idx) for x in bot] == [("Island bottom", +1, 33)]
+    assert bot[0].target == pytest.approx(200 - top[0].target)
+    h2, l2 = h.copy(), lo.copy(); h2[32], l2[32] = 104.0, 100.0     # the island falls back into the first gap
+    assert not islands(h2, l2, c, S, np.zeros(len(c)))
+    assert not [x for x in all_patterns(c, S, np.zeros(len(c))) if x.rule.startswith("Island")]  # closes only
 
 
 def test_download_prices_layout_and_retry_logic(tmp_path):

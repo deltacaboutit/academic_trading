@@ -49,6 +49,13 @@ DEFAULTS: dict = {
     "w_hs": 7, "w_triple": 15, "w_double": 15, "w_wedge": 7, "w_flag": 3, "w_pennant": 2,
     "w_round": 10, "round_bounds": 0.3, "round_min_width": 15, "round_fit": 0.9,
     "flag_prior_days": 60,            # 'thor' in the book's FLAGS() code
+    # Patterns added from PatternFinder 2.5 (not in the book; sources in patterns.py)
+    "w_triangle": 7, "w_rect": 7,     # tool choice: same window as wedges, the closest book pattern
+    "w_cup": 5,                       # tool choice: 5 days = O'Neil's shortest handle (1 week)
+    "cup_min_days": 35, "cup_max_days": 325,       # O'Neil: cup lasts 7 to 65 weeks
+    "cup_min_depth": 0.12, "cup_max_depth": 0.50,  # O'Neil: 12-33% deep, up to about 50% in weak markets
+    "island_max_days": 10,            # Murphy: the second gap comes within days (PatternFinder 2.5's limit)
+    "island_prior_days": 20,          # tool choice: first gap must reach a new 20-day closing high/low
     # ---- Framework 4c: gauges --------------------------------------------
     "rsi_w": 14, "rsi_low": 30, "rsi_high": 70,
     "bb_w": 20, "bb_k": 2.0,

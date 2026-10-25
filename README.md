@@ -232,7 +232,7 @@ and git keeps the old copies (about 100 MB each time). To fetch only tickers tha
 | 1 Cleaning | Logical checks (impossible prices, closed-market days, negative volume, bad quotes), rolling 3-standard-deviation check on returns, straight-line filling of gaps, the 5%-missing-per-year rule, and a full change log. |
 | 2 Turning points | Rolling window (strict inequalities, confirmed *w* days later) and PIPs (Euclidean, perpendicular and vertical distances). |
 | 3 Trend | MA crossover 10/50, MACD 12/26/9, momentum 12/9, 20- and 50-day breakouts (with the "yesterday" condition), price vs. SMA 10/50/200, trend state, price / time / whole-day filters, and Alexander's filter as a benchmark only. |
-| 4 Reversals | Support/resistance zones (corrected bin formula, hits, bounces, failures); head-and-shoulders and inverse, triple and double tops/bottoms, bull/bear flags and pennants, falling/rising wedges, rounding bottoms/tops (circle method); RSI (plain sums), Bollinger (book's standard deviation, with the usual version shown alongside), and ROC with adaptive levels. |
+| 4 Reversals | Support/resistance zones (corrected bin formula, hits, bounces, failures); head-and-shoulders and inverse, triple and double tops/bottoms, bull/bear flags and pennants, falling/rising wedges, rounding bottoms/tops (circle method), plus the seven patterns added later (see Version 2, row 4b); RSI (plain sums), Bollinger (book's standard deviation, with the usual version shown alongside), and ROC with adaptive levels. |
 | 5 Volume | Relative-volume weights of 1, 0.5 and 0 (no adjustment for rounding patterns). |
 | 6 Sentiment | 5 / 21 / 50 / 100 oscillators; Squeeze Play I, Squeeze Play II A and B, Tsunami, and the fast volatility swing; extreme readings measured against the record so far. |
 | 7 Rating | Weights 0.35 / 0.40 / 0.25, the ±0.40 rule with the 2-of-3 and veto conditions, the strong-trend context check, the 2-day confirmation, and the reasons for every rating. |
@@ -253,6 +253,7 @@ and git keeps the old copies (about 100 MB each time). To fetch only tickers tha
 | 2 / 4e [LMW] | Kernel-regression turning points (38-day windows, 3-day lag), the ten LMW patterns, volume trend, information-only mode until the 9b tests give a direction. |
 | 9b [LMW] | Normalised returns, decile chi-square and Kolmogorov–Smirnov tests (pooled, by NYSE/AMEX and Nasdaq), head-to-head with the textbook items, shadow ratings B and C. |
 | 4d | Dynamic Time Warping similarity panel: Savitzky–Golay smoothing, derivative and subsequence DTW, threshold 15, 20-day skip, optional Sakoe–Chiba band. |
+| 4b (added) | Seven chart patterns brought over from PatternFinder 2.5, which are not in the book: ascending, descending and symmetrical triangles, rectangles, cup and handle, and island tops and bottoms. They use the same turning points, no-look-ahead rule and trade plan as the book's patterns. Their rules come from Edwards & Magee, Murphy, O'Neil, Bulkowski and Lo, Mamaysky & Wang (2000); see choice 20 below. |
 
 ### The research run (all stocks)
 
@@ -290,6 +291,10 @@ These are labelled "tool choice" in the code, so they are easy to find and chang
 17. **Reality Check / SPA** use each rule's daily return over buy-and-hold (positions held for the judging period, costs on changes), close to close.
 18. **Weight tuning** maximises the average, across stocks, of each rating trade's return after costs minus buy-and-hold, on the training period. The weights step by 0.1 and the cut-off is chosen from 0.3, 0.4 and 0.5.
 19. **Broken artificial histories are redrawn.** For a stock with a huge one-day crash and very persistent volatility (for example FISV under GARCH-M), an artificial history can occasionally spiral until its price reaches zero or infinity. That history is thrown away and a new one drawn, and the count is shown on the Validation tab. The research run uses only `price_data/` (including `^VIX`), and a stock that still fails is listed under "Stocks that failed" rather than stopping its batch.
+20. **The seven added patterns** (from PatternFinder 2.5; the book has no rules for them, so each rule names its source in `atrade/patterns.py`):
+    - **Triangles and rectangles** use five alternating turning points, as in Lo, Mamaysky & Wang (2000), with a window of 7 days (the same as wedges). A side counts as "flat" when its points are within 4% of each other, the same tolerance as triple tops. Ascending triangles may only break up, and descending triangles only down. Symmetrical triangles and rectangles may break either way. A triangle must break between half and three-quarters of the way to its apex, the point where its two lines meet (Edwards & Magee). The target is the pattern's height at its widest part, measured from the broken line.
+    - **Cup and handle** (O'Neil): two rims within 4% of each other, 7 to 65 weeks apart; a cup 12–50% deep that passes the book's circle test, with at least half of its closes in the lowest 40% of its depth (this rejects V shapes); and a handle that stays in the cup's upper half. The target is the rim plus the cup's depth.
+    - **Island tops and bottoms** (Murphy): a gap to a new 20-day closing high (or low), then, within 10 days, a gap the other way that leaves the days in between stranded. The target is the island's own height, and the time limit is the usual 10 days. Islands need each day's high and low, so they are **left out of the random-price tests** (steps 3 and 4), which only have closing prices.
 
 ## 6. Checking the formulas
 
