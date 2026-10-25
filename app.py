@@ -68,6 +68,31 @@ def date_of(res, i):
     return (idx[-1] + pd.tseries.offsets.BDay(i - (len(idx) - 1))).date()
 
 
+def twin_verdict(o) -> str:
+    """One plain-English sentence about the edge over random twins (a row of edge_stats)."""
+    if not o or not o.get("trades"):
+        return "No pattern trades to test."
+    lo, hi = o.get("edge_lo"), o.get("edge_hi")
+    msg = (f"**{int(o['trades'])} pattern trades.** Their average return was {o['avg_return']:+.2f}% per trade, against "
+           f"{o['random_avg_return']:+.2f}% for their random twins, so the **edge** the patterns added was "
+           f"**{o['edge']:+.2f}%** per trade")
+    if lo is None or hi is None or (isinstance(lo, float) and np.isnan(lo)):
+        return msg + "."
+    msg += f" (95% range {lo:+.2f}% to {hi:+.2f}%). "
+    if lo > 0:
+        return msg + "The whole range is above zero: the patterns beat trades of the same shape on random days."
+    if hi < 0:
+        return msg + "The whole range is below zero: the patterns did worse than trades of the same shape on random days."
+    return msg + "The range includes zero, so there is **no reliable edge**: the result could easily be luck."
+
+
+TWIN_NOTE = ("Each real pattern trade is compared with 200 pretend trades on the same stock, in the same direction, with "
+             "the same target and stop distances and time limit, started on random days within about a year. "
+             "Edge = real return minus the twins' average. Trades are filled realistically (the day's high and low, "
+             "gaps exit at the open, the stop counts first if both are hit on one day). The 95% range treats trades "
+             "from the same month as one group, because they share the same market moves.")
+
+
 def pct(x, digits=1):
     return "–" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x * 100:+.{digits}f}%"
 
@@ -527,7 +552,30 @@ with tabs[3]:
             st.caption("In the book's tests (Tables 5.4–5.5) most pattern trades were stopped out, and similar shares "
                        "appeared in random price series.")
 
-# ============================================================ VALIDATION ====
+# ---- random-twin test for this stock (inside the Back-test tab) ----
+with tabs[3]:
+    st.subheader("Random-twin test for this stock's chart patterns")
+    st.caption(TWIN_NOTE + " One stock has few trades, so the all-stock result (All stocks tab) is the one to trust.")
+    key = f"twins_{res['ticker']}_{len(df)}"
+    if st.button("Run the random-twin test for this stock", help="Takes a few seconds."):
+        from atrade.edge_stats import full_report
+        from atrade.twins import twin_trades
+        with st.spinner("Simulating 200 random twins for every pattern trade ..."):
+            st.session_state[key] = full_report(twin_trades(res["ticker"], df, res["patterns"], S))
+    rep_ = st.session_state.get(key)
+    if rep_ is not None:
+        if not rep_:
+            st.write("This stock has no pattern trades to test.")
+        else:
+            st.markdown(twin_verdict(rep_["overall"].iloc[0].to_dict()))
+            st.write("**Ways of managing the same trades** (change = the variant's edge minus the book plan's edge, "
+                     "on the same random days):")
+            st.dataframe(rep_["variants"], hide_index=True)
+            with st.expander("By pattern"):
+                st.dataframe(rep_["by_pattern"], hide_index=True)
+            with st.expander("Textbook checks: edge of trades that passed minus trades that failed"):
+                st.dataframe(rep_["checks"], hide_index=True)
+
 with tabs[4]:
     st.write("Framework 9's pass rule: in the **final test** period a rule must beat buy-and-hold after costs "
              "(steps 2 and 7) **and** beat the artificial price histories of the random-price test (step 3).")
@@ -740,6 +788,32 @@ with tabs[8]:
             st.caption("Turn them on in Settings → 'Use tuned weights'. The final-test row is reported once, as is.")
         else:
             st.write("No weights qualified.")
+        st.subheader("Random-twin test for the chart patterns (from PatternFinder 2.5)")
+        ov = load_table("summary/twins_overall.csv")
+        if ov is not None and len(ov):
+            st.markdown(twin_verdict(ov.iloc[0].to_dict()))
+            st.caption(TWIN_NOTE)
+            for title, name, note in (
+                    ("By pattern (Holm and Benjamini–Hochberg adjust for testing many patterns)", "summary/twins_by_pattern.csv",
+                     "holm_p / bh_q below 0.05 would mean a pattern's edge is unlikely to be luck even after testing all of "
+                     "them. 'too_few' marks patterns with fewer than 20 trades."),
+                    ("Textbook checks: do trades that pass a check beat those that fail it?", "summary/twins_checks.csv",
+                     "A check HELPS only if holm_p < 0.05, the difference is above 0 in both halves of the period, and at "
+                     "least 20 trades passed and 20 failed. Only such checks may be marked 'helped in the back-test'."),
+                    ("Ways of managing the same trades", "summary/twins_variants.csv",
+                     "change = the variant's edge minus the book plan's edge, trade by trade, on the same random days. "
+                     "pattern_stop is the chart books' own stop for each pattern; the book plan stays the default."),
+                    ("First and second half of the period", "summary/twins_by_half.csv", "A real effect should show up in both halves."),
+                    ("Bullish and bearish patterns", "summary/twins_by_bias.csv", ""),
+                    ("How the trades ended", "summary/twins_by_exit.csv", "line = 2 closes back across the broken line.")):
+                tb = load_table(name)
+                if tb is not None and len(tb):
+                    with st.expander(title):
+                        st.dataframe(tb, hide_index=True)
+                        if note:
+                            st.caption(note)
+        else:
+            st.write("Not in this research run yet. It is added automatically the next time the research run is started.")
         for title, name, note in (
                 ("Does each rule beat buy-and-hold across stocks? (step 5)", "summary/bernoulli_by_rule.csv",
                  "Each stock is one coin flip. p < 0.05: more stocks beat buy-and-hold than chance would give."),

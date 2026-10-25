@@ -26,6 +26,7 @@ The **Pattern guide** tab explains every chart pattern with a textbook example, 
 - **Textbook checks:** 21 yes/no questions the classic chart books ask before trusting a breakout, such as "was volume heavy on the breakout day?" or "does the market agree?". They are shown for every chart pattern as information only and never change the rating.
 - **Hit rate:** the share of signals after which the price moved the predicted way.
 - **p-value:** the chance a result this good would appear by luck alone. Below 0.05 is the usual cut-off.
+- **Random twins and edge:** each chart-pattern trade is compared with 200 trades of the same shape started on random days near it. The **edge** is how much better the real trade did. If the patterns had real skill, the edge would be clearly above zero. The All stocks tab shows the result over every stock.
 - **Buy-and-hold:** simply owning the stock. Each rule must do better than this to be worth using.
 
 ### Things to keep in mind
