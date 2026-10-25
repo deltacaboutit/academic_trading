@@ -122,7 +122,7 @@ if not res["quality"]["passed"]:
              f"{res['quality']['worst_year']} (limit 5%). Treat this rating with extra caution.")
 
 tabs = st.tabs(["Rating", "Chart", "Signals", "Back-test", "Validation", "LMW", "Similarity", "Watch list",
-                "All stocks", "Options data", "Data quality", "Settings", "How it works"])
+                "All stocks", "Options data", "Data quality", "Settings", "How it works", "Pattern guide"])
 
 # =============================================================== RATING ====
 with tabs[0]:
@@ -181,6 +181,10 @@ with tabs[0]:
               chk(max(G) <= S["veto_level"], f"no group above +{S['veto_level']:.2f}")]
         st.markdown("**Buy needs:** " + " &nbsp; ".join(b), unsafe_allow_html=True)
         st.markdown("**Sell needs:** " + " &nbsp; ".join(sl), unsafe_allow_html=True)
+
+    with st.expander("Summary in plain English"):
+        from atrade.report import summary_text
+        st.markdown(summary_text(res))
 
     plan = res["plan"]
     if plan:
@@ -426,6 +430,19 @@ with tabs[2]:
                    "show how the breakout trades ended (Confirmed = still open); two shapes that break out on the same day "
                    "make one trade. Rounding tops and bottoms and islands are only defined on the day they complete, "
                    "so they appear only in those last columns.")
+
+    st.subheader("Explain a pattern")
+    from atrade.report import describe
+    pick = [(f"{u.rule} — forming", u) for u in fm]
+    pick += [(f"{sg.rule} — {'buy' if sg.direction > 0 else 'sell'} signal on {date_of(res, sg.idx):%d %b %Y}", sg)
+             for sg in sorted(res["patterns"], key=lambda x: -x.idx)]
+    if pick:
+        k = st.selectbox("Pattern", range(len(pick)), format_func=lambda i: pick[i][0],
+                         help="Patterns forming now first, then every pattern signal, newest first.")
+        with st.container(border=True):
+            st.markdown(pick[k][1] and describe(pick[k][1], res))
+    else:
+        st.write("No chart patterns were found in this stock's history.")
 
     st.subheader("Signals")
     st.write("Every signal the rules produced, newest first. Signals are dated on the day they became known; "
@@ -951,3 +968,66 @@ with tabs[11]:
 # ========================================================= HOW IT WORKS ====
 with tabs[12]:
     st.markdown(Path(__file__).with_name("HOW_IT_WORKS.md").read_text(encoding="utf-8"))
+
+# ======================================================== PATTERN GUIDE ====
+with tabs[13]:
+    from atrade.examples import example_chart
+    from atrade.pattern_info import DISCLAIMER, GLOSSARY, PATTERN_INFO, STATUS_HELP, STOP_RULE
+    st.write("Every chart pattern the tool looks for, with a made-up textbook example. The example is drawn from "
+             "what the tool's own rules found in it, so it shows the same lines and targets the tool uses.")
+    cats = ["Reversal", "Continuation", "Either way"]
+    g1, g2 = st.columns([1, 2])
+    cat = g1.radio("Kind of pattern", cats, help="Reversal: the trend may turn. Continuation: the trend may carry on. "
+                                                 "Either way: it can break in both directions.")
+    names = [k for k, v in PATTERN_INFO.items() if v["category"] == cat]
+    name = g2.selectbox("Pattern", names)
+    info = PATTERN_INFO[name]
+    left, right = st.columns([3, 2])
+    with left:
+        gdf, gsg = example_chart(name)
+        gfig = go.Figure()
+        gx = list(range(len(gdf)))
+        if name.startswith("Island"):
+            for i in gx:
+                gfig.add_trace(go.Scatter(x=[i, i], y=[gdf["Low"].iloc[i], gdf["High"].iloc[i]], mode="lines",
+                                          line=dict(color="#24292f", width=3), showlegend=False, hoverinfo="skip"))
+        else:
+            gfig.add_trace(go.Scatter(x=gx, y=gdf["Close"], mode="lines", line=dict(color="#24292f", width=1.6),
+                                      name="Close", showlegend=False))
+        if gsg is not None:
+            col = BUY_DARK if gsg.direction > 0 else SELL_DARK
+            pts = [p for p in gsg.points if p[2] != "prior"]
+            gfig.add_trace(go.Scatter(x=[p[0] for p in pts], y=[p[1] for p in pts], mode="lines+markers",
+                                      line=dict(color=col, width=2.5), marker=dict(size=7), showlegend=False,
+                                      text=[p[2] for p in pts], hoverinfo="text"))
+            if gsg.line is not None:
+                a0 = pts[0][0]
+                gfig.add_trace(go.Scatter(x=[a0, gsg.idx], y=[gsg.line_value(a0), gsg.line_value(gsg.idx)], mode="lines",
+                                          line=dict(color=GREY, width=1.2, dash="dot"), showlegend=False,
+                                          hovertext="The line the price breaks", hoverinfo="text"))
+            gfig.add_trace(go.Scatter(x=[gsg.idx], y=[gdf["Close"].iloc[gsg.idx]], mode="markers",
+                                      marker=dict(symbol="star", size=16, color=col), showlegend=False,
+                                      hovertext="Breakout: the signal day", hoverinfo="text"))
+            tl = min(gsg.time_limit, gsg.idx + 20)        # a short stretch, so the target shows on the picture
+            gfig.add_trace(go.Scatter(x=[gsg.idx, tl], y=[gsg.target, gsg.target], mode="lines",
+                                      line=dict(color=col, dash="dash", width=1), showlegend=False,
+                                      hovertext="Price target", hoverinfo="text"))
+            gfig.add_annotation(x=tl, y=gsg.target, text="target", showarrow=False, yshift=10, font=dict(color=col))
+        gfig.update_layout(height=340, margin=dict(l=10, r=40, t=10, b=10), plot_bgcolor="white",
+                           xaxis=dict(title="Day", gridcolor="#eaeef2"), yaxis=dict(title="Price", gridcolor="#eaeef2"))
+        st.plotly_chart(gfig, key="guide_chart")
+        st.caption("A clean, made-up example. The star is the breakout day, the dotted grey line is the line that "
+                   "breaks and the dashed line is the price target. Real charts are much messier.")
+    with right:
+        st.markdown(f"**{info['category']}** pattern · usual direction: **{info['bias']}**")
+        st.markdown(f"**What it looks like.** {info['looks']}")
+        st.markdown(f"**What it may mean.** {info['means']}")
+        st.markdown(f"**The tool's rule.** {info['rule']}")
+        st.markdown(f"**Target.** {info['target']}")
+        st.markdown(f"**Stop.** {STOP_RULE} The chart books would put a stop here instead: {info['pattern_stop']}")
+    st.subheader("What the statuses mean")
+    st.table(pd.DataFrame([{"Status": k, "Meaning": v} for k, v in STATUS_HELP.items()]).set_index("Status"))
+    st.subheader("Words used")
+    for term, text in GLOSSARY:
+        st.markdown(f"**{term}.** {text}")
+    st.info(DISCLAIMER)

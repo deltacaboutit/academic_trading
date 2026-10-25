@@ -34,9 +34,9 @@ A program that runs on your own Windows computer and opens in your web browser. 
 
 | Tab | What you see |
 | --- | --- |
-| Rating | Today's Buy / Sell / Hold, the three group scores, which rating rules pass, the trade plan (target, time limit, stop-loss), and every signal that counts today. |
+| Rating | Today's Buy / Sell / Hold, a plain-English summary of the stock, the three group scores, which rating rules pass, the trade plan (target, time limit, stop-loss), and every signal that counts today. |
 | Chart | Candles, the 50- and 200-day averages, support/resistance zones, chart patterns with their targets, GEX levels, volume (coloured by the volume check) and RSI. |
-| Signals | Chart patterns that are still forming (complete shape, no breakout yet), with the lines they must break, their targets and deadlines, and a count of how this stock's patterns turned out. Then every signal in a period, with the outcome of each pattern trade. You can download the list as a CSV file. |
+| Signals | Chart patterns that are still forming (complete shape, no breakout yet), with the lines they must break, their targets and deadlines, and a count of how this stock's patterns turned out. You can pick any pattern to read a plain-English explanation of it. Then every signal in a period, with the outcome of each pattern trade. You can download the list as a CSV file. |
 | Back-test | Each rule compared with buy-and-hold after costs, for training, validation and final-test periods. Also pattern outcomes (target hit / time limit / stopped out). |
 | Validation | Framework 9's full pass rule (steps 2, 3 and 7): which null models fit, the random-price test, patterns on random prices, the Reality Check / SPA, the accuracy of pattern price targets, and extra step-2 checks. **Run full validation** runs the random-price test for the stock on screen. |
 | LMW | The [LMW] patterns found, their information tests, shadow ratings B and C next to the official rating, and a head-to-head with the textbook patterns. |
@@ -46,6 +46,7 @@ A program that runs on your own Windows computer and opens in your web browser. 
 | Options data | Which sentiment systems are active (and whether each uses real volume or the open-interest substitute), the state of the options data store, a button to get the latest data, and importing extra history files. |
 | Data quality | What the cleaning step found and changed. |
 | Settings | Weights, cut-offs, filters, costs and more. Values are saved in `data\settings.json`. |
+| Pattern guide | Every chart pattern with a made-up textbook example (drawn from what the tool's own rules find in it), what it looks like and may mean, the tool's exact rule, its target, the statuses, and a glossary of the words used. |
 
 ## 2b. Putting the tool online for free (Streamlit Community Cloud)
 
@@ -255,6 +256,7 @@ and git keeps the old copies (about 100 MB each time). To fetch only tickers tha
 | 4d | Dynamic Time Warping similarity panel: Savitzky–Golay smoothing, derivative and subsequence DTW, threshold 15, 20-day skip, optional Sakoe–Chiba band. |
 | 4b (added) | Seven chart patterns brought over from PatternFinder 2.5, which are not in the book: ascending, descending and symmetrical triangles, rectangles, cup and handle, and island tops and bottoms. They use the same turning points, no-look-ahead rule and trade plan as the book's patterns. Their rules come from Edwards & Magee, Murphy, O'Neil, Bulkowski and Lo, Mamaysky & Wang (2000); see choice 20 below. |
 | 4b statuses | Patterns that are still forming, from PatternFinder 2.5: a complete shape that has not broken out yet is shown on the chart (dotted) and in a table, with the statuses Forming, Failed, Expired, Confirmed, Target reached, Stopped out and Time limit reached. Forming patterns never vote in the rating and are never back-tested. See choice 21 below. |
+| Plain English (added) | From PatternFinder 2.5: a summary of each stock (rating, indicator sentences, forming and recent patterns, track record), an explanation of every pattern, the Pattern guide tab and a glossary. The text is worked out from the same numbers as the other tabs (`atrade/report.py`, `atrade/pattern_info.py`, `atrade/examples.py`). |
 
 ### The research run (all stocks)
 

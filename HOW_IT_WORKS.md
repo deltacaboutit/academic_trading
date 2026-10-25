@@ -17,6 +17,9 @@ Each time you analyse a stock, the tool runs the frameworks from your design doc
 
 ### Words used in the app
 
+The **Pattern guide** tab explains every chart pattern with a textbook example, and has a longer glossary. The Rating tab has a **summary in plain English**, and the Signals tab can **explain any pattern** it found.
+
+
 - **Signal:** a rule saying "buy" or "sell" on a particular day.
 - **Live:** a signal still counts in the rating, usually for 10 trading days, or until its pattern trade closes.
 - **Forming pattern:** a chart pattern whose shape is complete but whose price has not yet closed beyond its line. It is shown on the Chart and Signals tabs as a heads-up only: it has **no vote** in the rating until it breaks out. It can then end as Failed (price went the wrong way first), Expired (no breakout in time) or Confirmed (it broke out and became a signal), and a confirmed pattern's trade ends at Target reached, Stopped out or Time limit reached.
