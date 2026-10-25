@@ -399,6 +399,7 @@ with tabs[1]:
 
 # ============================================================== SIGNALS ====
 with tabs[2]:
+    from atrade.report import checks_short
     st.subheader("Chart patterns forming now")
     fm = res.get("forming", [])
     if fm:
@@ -413,13 +414,15 @@ with tabs[2]:
                          "Breaks down below": round(dns, 2) if dns is not None else None,
                          "Target if up": round(u.target_if(1, n - 1), 2) if ups is not None else None,
                          "Target if down": round(u.target_if(-1, n - 1), 2) if dns is not None else None,
-                         "Must break by": date_of(res, u.deadline)})
+                         "Must break by": date_of(res, u.deadline),
+                         "Checks passed": checks_short(u)})
         st.dataframe(pd.DataFrame(rows), hide_index=True)
     else:
         st.write("No chart pattern is forming today.")
     st.caption("A forming pattern has a complete shape but no breakout yet. It does **not** vote in the rating and is "
                "not back-tested: it only becomes a signal if a close goes beyond its line by the 'must break by' date. "
-               "Line levels and targets are for a break today.")
+               "Line levels and targets are for a break today. 'Checks passed' counts the textbook confirmation checks "
+               "that could be judged so far (pick the pattern below to see them); they are information only.")
     with st.expander("How did this stock's chart patterns turn out?"):
         ps = res.get("pattern_status")
         if ps is not None and not ps.empty:
@@ -460,7 +463,8 @@ with tabs[2]:
                      "Volume ×avg": round(float(res["rv"][sg.idx]), 2) if not np.isnan(res["rv"][sg.idx]) else None,
                      "Target": round(sg.target, 2) if sg.target is not None else None,
                      "Outcome": tr.get("outcome", ""), "Trade return": pct(tr.get("ret")) if "ret" in tr else "",
-                     "Trend before": sg.extra.get("trend_before", ""), "Reason": sg.text})
+                     "Trend before": sg.extra.get("trend_before", ""),
+                     "Textbook checks": checks_short(sg) if sg.kind == "pattern" else "", "Reason": sg.text})
     sdf = pd.DataFrame(rows)
     if not sdf.empty:
         sdf = sdf.sort_values("Date", ascending=False)

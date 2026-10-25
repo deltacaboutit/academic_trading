@@ -83,6 +83,15 @@ def load_vix(years: int) -> pd.Series | None:
         return None
 
 
+def load_market(years: int) -> pd.Series | None:
+    """SPY's closing prices, for the market and relative-strength checks (confirm.py)."""
+    try:
+        df, _ = load_prices("SPY", years)
+        return df["Close"]
+    except Exception:
+        return None
+
+
 # --------------------------------------------------- options snapshots ------
 
 def snapshot_options(ticker: str) -> dict:

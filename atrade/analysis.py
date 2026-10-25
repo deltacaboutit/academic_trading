@@ -10,6 +10,7 @@ from . import data as D
 from .cleaning import clean
 from .gauges import gauge_signals, gauge_values
 from .gex import gex_signals
+from .confirm import attach_checks
 from .forming import forming_now, status_counts
 from .patterns import all_patterns
 from .rating import RATING_NAME, live_votes, rating_signals, run_rating
@@ -50,7 +51,7 @@ def apply_tuned_weights(s: dict) -> dict:
     return s
 
 
-def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=None) -> dict:
+def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=None, market=None) -> dict:
     s = apply_tuned_weights(s)
 
     def step(msg):
@@ -87,6 +88,14 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
             sg.live_until = tr["exit_idx"]
         else:
             sg.live_until = max(sg.time_limit or sg.idx, sg.idx)
+
+    step("Textbook checks for the chart patterns (information only)")
+    if market is None and ticker.upper() not in ("DEMO", "SPY"):
+        market = D.load_market(int(s["history_years"]))
+    elif market is None and ticker.upper() == "SPY":
+        market = df["Close"]
+    forming = forming_now(setups)
+    attach_checks(df, sig_pat + forming, market)
 
     step("Framework 5: volume")
     rv = relative_volume(df["Volume"].to_numpy(float), int(s["rv_days"]))
@@ -193,7 +202,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         "sentiment_series": series, "sentiment_status": sent_status, "extremes": extremes,
         "rating": rating_df, "rating_now": RATING_NAME[cur], "votes": votes, "plan": plan,
         "results": res, "passes": passes, "pattern_outcomes": pattern_outcomes(sig_pat, n, s),
-        "setups": setups, "forming": forming_now(setups), "pattern_status": status_counts(setups, sig_pat),
+        "setups": setups, "forming": forming, "market_loaded": market is not None, "pattern_status": status_counts(setups, sig_pat),
         "allowed": allowed, "gex": gex_lv, "gex_signals": sig_gex,
         "lmw_detections": lmw_det, "lmw_signals": sig_lmw, "lmw_settings": lset, "lmw_info": lmw_info,
         "rating_b": rating_b, "rating_c": rating_c, "variants": variants,

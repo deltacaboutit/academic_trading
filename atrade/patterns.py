@@ -638,7 +638,8 @@ def triangles_rectangles(close, s, trend_state, setups=None):
             out.append(Signal(rule, "reversal", "pattern", d, int(e), target=float(_lv(line, e) + d * H),
                               time_limit=int(e + W), line=line, points=[(a, b, "") for a, b in zip(t, p)],
                               text=f"{rule}: close broke {where}.",
-                              extra={"height": H, "width": W, "trend_before": _trend_label(trend_state, t1)}))
+                              extra={"height": H, "width": W, "trend_before": _trend_label(trend_state, t1),
+                                     "apex": None if kind == "rect" else float(ts)}))
     return out
 
 

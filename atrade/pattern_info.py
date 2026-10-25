@@ -109,7 +109,7 @@ PATTERN_INFO = {
         pattern_stop="Above the highest price of the last part of the dome.",
     ),
     "Cup and handle": dict(
-        category="Reversal", bias="Bullish",
+        category="Continuation", bias="Bullish",
         looks="A rounded, U-shaped dip (the 'cup') that climbs back to its starting price, followed by a small "
               "pullback (the 'handle') that stays in the upper half of the cup.",
         means="A slow, orderly recovery followed by a last brief shake-out. A close above the rim suggests a new "

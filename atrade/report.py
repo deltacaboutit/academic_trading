@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 
 from . import indicators as ind
+from .confirm import CHECKS, PROVEN, summarize
 from .forming import TRADE_STATUS, forming_now, signal_status
 from .pattern_info import DISCLAIMER, PATTERN_INFO, STATUS_HELP, STOP_RULE
 from .signals import Setup, Signal
@@ -121,6 +122,19 @@ def indicator_sentences(res) -> list[str]:
         elif px < bb["low"][-1]:
             out.append(f"The close is below the lower Bollinger Band ({price(bb['low'][-1])}), so the price is "
                        "unusually stretched downward.")
+    a = ind.atr(df["High"].to_numpy(float), df["Low"].to_numpy(float), c)[-1]
+    if np.isfinite(a):
+        out.append(f"The typical daily price range (ATR, 14 days) is {price(a)}, or {a / px * 100:.1f}% of the price.")
+    ob = ind.obv(c, df["Volume"].to_numpy(float))
+    if n > 21:
+        up_obv, up_px = ob[-1] > ob[-21], c[-1] > c[-21]
+        if up_obv == up_px:
+            out.append(f"On-Balance Volume (OBV) is {'rising' if up_obv else 'falling'} over the last 20 days, in step "
+                       "with the price, so volume backs the recent move.")
+        else:
+            out.append(f"On-Balance Volume (OBV) is {'rising' if up_obv else 'falling'} over the last 20 days while the "
+                       f"price is {'rising' if up_px else 'falling'}. Murphy calls this a divergence: volume is not "
+                       "backing the recent move.")
     rv = res["rv"][-1]
     if np.isfinite(rv):
         if rv >= float(s["rv_full"]):
@@ -140,6 +154,50 @@ def _info_lines(rule):
         return []
     return ["", "**What it looks like.** " + info["looks"], "", "**What it may mean.** " + info["means"],
             "", "**The tool's rule.** " + info["rule"]]
+
+
+def checks_short(item) -> str:
+    """'7/12' = 7 of the 12 textbook checks that could be judged passed ('' if none)."""
+    chk = item.extra.get("checks")
+    if not chk:
+        return ""
+    passed, judged = summarize(chk)
+    return f"{passed}/{judged}" if judged else ""
+
+
+def checks_lines(item, res=None) -> list[str]:
+    """The "Textbook checks" part of a pattern's explanation."""
+    chk = item.extra.get("checks")
+    if not chk:
+        return []
+    passed, judged = summarize(chk)
+    L = ["", "**Textbook checks**"]
+    if not judged:
+        return L + ["None of the checks can be judged yet."]
+    so_far = " so far (several are only worked out once the price breaks out)" if isinstance(item, Setup) else ""
+    L.append(f"{passed} of the {judged} checks that could be judged passed{so_far}. These are the confirmations "
+             "the classic chart books look for (StockCharts' Technical Analysis 101, John Murphy).")
+    if PROVEN:
+        L.append("Checks marked *(helped in the back-test)* are the ones a back-test showed to matter. "
+                 "The others are background information.")
+    else:
+        L.append("None of them has been shown to help in a back-test yet, so treat them as background "
+                 "information, not as a buy or sell signal. They never change the rating.")
+    if res is not None and not res.get("market_loaded", True):
+        L.append("SPY's prices were not available, so the two market checks are left blank.")
+    group = None
+    for c in CHECKS:
+        x = chk.get(c.key)
+        if not x or not x["applies"]:
+            continue
+        if c.group != group:
+            group = c.group
+            L.append(f"- *{group}*")
+        mark = "✓" if x["passed"] else ("✗" if x["passed"] is False else "–")
+        note = x["text"] or ("not judged" if x["passed"] is None else "")
+        star = " *(helped in the back-test)*" if c.key in PROVEN else ""
+        L.append(f"    - {mark} {c.label}{star}" + (f": {note}" if note else ""))
+    return L
 
 
 def describe_signal(sg: Signal, res) -> str:
@@ -192,6 +250,7 @@ def describe_signal(sg: Signal, res) -> str:
         L.append(f"- The trade is still open. Latest close {price(c[-1])}: "
                  + (f"{change(c[-1], sg.target)} to the target" if sg.target is not None else "")
                  + (f", and the broken line is at {price(lv)} today." if lv is not None else "."))
+    L += checks_lines(sg, res)
     L += ["", DISCLAIMER]
     return "\n".join(L)
 
@@ -222,6 +281,7 @@ def describe_setup(u: Setup, res) -> str:
     if u.status == "Forming":
         L.append(f"- Latest close: {price(c[-1])}. A forming pattern has no vote in the rating; it only becomes a "
                  "signal if it breaks out in time.")
+    L += checks_lines(u, res)
     L += ["", DISCLAIMER]
     return "\n".join(L)
 
@@ -249,12 +309,15 @@ def summary_text(res) -> str:
         L.append(f"{len(fm)} pattern(s) are forming now (complete shape, no breakout yet; they do not vote):")
         for u in fm[:6]:
             parts = [f"{'above' if d > 0 else 'below'} {price(ln[0] * (n - 1) + ln[1])}" for d, ln in u.breaks]
-            L.append(f"- {u.rule}: would break out on a close {' or '.join(parts)}, by {_date(res, u.deadline)}.")
+            ck = checks_short(u)
+            L.append(f"- {u.rule}: would break out on a close {' or '.join(parts)}, by {_date(res, u.deadline)}."
+                     + (f" Textbook checks passed so far: {ck}." if ck else ""))
     if recent:
         L.append(f"{len(recent)} pattern(s) broke out in the last {RECENT_DAYS} trading days:")
         for sg in sorted(recent, key=lambda x: -x.idx):
             L.append(f"- {sg.rule} ({'buy' if sg.direction > 0 else 'sell'}) on {_date(res, sg.idx)}: "
-                     f"{signal_status(sg).lower()}, target {price(sg.target)}.")
+                     f"{signal_status(sg).lower()}, target {price(sg.target)}"
+                     + (f", textbook checks passed {checks_short(sg)}." if checks_short(sg) else "."))
     if not fm and not recent:
         L.append("No pattern is forming or has broken out in the last "
                  f"{RECENT_DAYS} trading days.")

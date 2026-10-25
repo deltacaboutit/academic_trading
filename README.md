@@ -256,6 +256,7 @@ and git keeps the old copies (about 100 MB each time). To fetch only tickers tha
 | 4d | Dynamic Time Warping similarity panel: Savitzky–Golay smoothing, derivative and subsequence DTW, threshold 15, 20-day skip, optional Sakoe–Chiba band. |
 | 4b (added) | Seven chart patterns brought over from PatternFinder 2.5, which are not in the book: ascending, descending and symmetrical triangles, rectangles, cup and handle, and island tops and bottoms. They use the same turning points, no-look-ahead rule and trade plan as the book's patterns. Their rules come from Edwards & Magee, Murphy, O'Neil, Bulkowski and Lo, Mamaysky & Wang (2000); see choice 20 below. |
 | 4b statuses | Patterns that are still forming, from PatternFinder 2.5: a complete shape that has not broken out yet is shown on the chart (dotted) and in a table, with the statuses Forming, Failed, Expired, Confirmed, Target reached, Stopped out and Time limit reached. Forming patterns never vote in the rating and are never back-tested. See choice 21 below. |
+| 4b checks (added) | The 21 textbook confirmation checks from PatternFinder 2.5 for every pattern signal and forming pattern, with ATR, OBV and key reversal days. Information only; see choice 22 below. |
 | Plain English (added) | From PatternFinder 2.5: a summary of each stock (rating, indicator sentences, forming and recent patterns, track record), an explanation of every pattern, the Pattern guide tab and a glossary. The text is worked out from the same numbers as the other tabs (`atrade/report.py`, `atrade/pattern_info.py`, `atrade/examples.py`). |
 
 ### The research run (all stocks)
@@ -305,6 +306,12 @@ These are labelled "tool choice" in the code, so they are easy to find and chang
     - **Expired** means there was no breakout before the deadline.
     - **Tool choice:** the "forming now" table shows only patterns still inside their breakout window today. Where several forming shapes of the same pattern overlap, it keeps the best-fitting cup, or otherwise the newest shape. Older shapes appear only in the "how did they turn out" counts.
     - Rounding tops and bottoms and island reversals are only defined on the day they complete, so they have no forming stage.
+22. **Textbook confirmation checks** (from PatternFinder 2.5, `atrade/confirm.py`): 21 yes/no questions the classic chart books ask before trusting a breakout, about volume, the trend, the pullback, the breakout day, gaps and key reversal days, and room to run. The keys, thresholds and sources are the same as in PatternFinder 2.5 (StockCharts' *Technical Analysis 101*, Murphy's *Charting Made Easy*, Edwards & Magee, Bulkowski), so its v2.5 back-test results apply here. They are **information only**: they never change a signal, a vote or the rating. A check that cannot be judged is left blank, which is not the same as failing. No check uses prices after the day it is judged on (`tests/test_confirm.py`). Three tool choices adapt them to this tool:
+    - ATR (Wilder's 14-day Average True Range, the typical size of one day's price range) and OBV (On-Balance Volume, a running total of volume on up and down days) are new indicators in `atrade/indicators.py`.
+    - "Room to run" looks for old peaks or troughs among the rolling-window turning points with a 15-day window, counting only points already confirmed on the judging day.
+    - Wedges count as continuation patterns, because the book's wedge rule needs a move in the breakout's direction before the wedge.
+    - The two market checks need SPY's prices. For the `DEMO` ticker they are left blank.
+    - Only checks that a back-test shows to help (Holm p < 0.05, better in both halves of the period, and at least 20 trades that passed and 20 that failed) go into `PROVEN`. The app then marks them "helped in the back-test". `PROVEN` is empty for now.
 
 ## 6. Checking the formulas
 
