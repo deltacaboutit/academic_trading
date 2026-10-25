@@ -337,6 +337,25 @@ with tabs[1]:
                 fig.add_trace(go.Scatter(x=[df.index[sg.idx], df.index[tl]], y=[sg.target, sg.target], mode="lines",
                                          line=dict(color=col, dash="dash", width=1), showlegend=False,
                                          hovertext="Price target until the time limit"), 1, 1)
+        # patterns still forming: dotted, with the line that would have to break drawn up to today
+        for u in res.get("forming", []):
+            if u.points[-1][0] < a:
+                continue
+            col = BUY_DARK if u.direction > 0 else SELL_DARK if u.direction < 0 else GREY
+            pts = [p for p in u.points if p[2] != "prior"]
+            fig.add_trace(go.Scatter(x=[df.index[p[0]] for p in pts], y=[p[1] for p in pts], mode="lines+markers",
+                                     line=dict(color=col, width=2, dash="dot"), marker=dict(size=6, symbol="circle-open"),
+                                     name=f"{u.rule} (forming)", hovertext=f"{u.rule}: forming, no breakout yet",
+                                     showlegend=False), 1, 1)
+            t0 = pts[-1][0]
+            for d, ln in u.breaks:
+                fig.add_trace(go.Scatter(x=[df.index[t0], df.index[-1]], y=[ln[0] * t0 + ln[1], ln[0] * (n - 1) + ln[1]],
+                                         mode="lines", line=dict(color=BUY_DARK if d > 0 else SELL_DARK, width=1.5, dash="dot"),
+                                         showlegend=False, hovertext=f"{u.rule}: a close {'above' if d > 0 else 'below'} "
+                                                                     f"this line would be a breakout"), 1, 1)
+            fig.add_annotation(x=df.index[t0], y=pts[-1][1], text=f"{u.rule} (forming)", showarrow=True, arrowcolor=col,
+                               arrowwidth=1, ax=0, ay=34 if u.direction > 0 else -34, font=dict(size=11, color=col),
+                               bgcolor="rgba(255,255,255,0.9)", bordercolor=col, borderwidth=1, borderpad=3, row=1, col=1)
     # zone bounces and (optionally) indicator signals
     def ind_shown(sg):
         if ind_pick == "None" or sg.kind not in IND_KINDS or ind_pick not in ("All indicators", sg.rule):
@@ -370,11 +389,45 @@ with tabs[1]:
     st.caption("Volume bars: green = at least 1.5× the 50-day average (signal confirmed), blue = 1.0–1.5× (half weight), "
                "grey = below average (signal not confirmed). Shaded bands are today's support/resistance zones. "
                "Stars mark chart-pattern breaks and open circles mark turning points; the dashed line is the price target until the time limit. "
+               "Dotted shapes are patterns still forming: a close beyond the dotted line would be a breakout. "
                "Triangles are buy and sell signals; 'Strongest only' keeps the indicator signals that came with "
                "green (heavy) volume.")
 
 # ============================================================== SIGNALS ====
 with tabs[2]:
+    st.subheader("Chart patterns forming now")
+    fm = res.get("forming", [])
+    if fm:
+        DIR = {1: "Up", -1: "Down", 0: "Either way"}
+        rows = []
+        for u in fm:
+            lines = {d: ln[0] * (n - 1) + ln[1] for d, ln in u.breaks}
+            ups, dns = lines.get(1), lines.get(-1)
+            rows.append({"Pattern": u.rule, "Expected break": DIR[u.direction],
+                         "Shape confirmed": date_of(res, u.known),
+                         "Breaks up above": round(ups, 2) if ups is not None else None,
+                         "Breaks down below": round(dns, 2) if dns is not None else None,
+                         "Target if up": round(u.target_if(1, n - 1), 2) if ups is not None else None,
+                         "Target if down": round(u.target_if(-1, n - 1), 2) if dns is not None else None,
+                         "Must break by": date_of(res, u.deadline)})
+        st.dataframe(pd.DataFrame(rows), hide_index=True)
+    else:
+        st.write("No chart pattern is forming today.")
+    st.caption("A forming pattern has a complete shape but no breakout yet. It does **not** vote in the rating and is "
+               "not back-tested: it only becomes a signal if a close goes beyond its line by the 'must break by' date. "
+               "Line levels and targets are for a break today.")
+    with st.expander("How did this stock's chart patterns turn out?"):
+        ps = res.get("pattern_status")
+        if ps is not None and not ps.empty:
+            st.dataframe(ps.rename(columns={"rule": "Pattern", "shapes": "Shapes found"}), hide_index=True)
+        st.caption("Each complete shape is counted once. **Broke out**: price closed beyond the line in time, which made "
+                   "a signal. **Failed**: before breaking out, price closed across the pattern's other line or beyond its "
+                   "extreme, or broke out too early. **Expired**: no breakout before the deadline. The last four columns "
+                   "show how the breakout trades ended (Confirmed = still open); two shapes that break out on the same day "
+                   "make one trade. Rounding tops and bottoms and islands are only defined on the day they complete, "
+                   "so they appear only in those last columns.")
+
+    st.subheader("Signals")
     st.write("Every signal the rules produced, newest first. Signals are dated on the day they became known; "
              "a trade would start at the next day's open.")
     f1, f2 = st.columns(2)

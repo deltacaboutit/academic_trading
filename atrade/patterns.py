@@ -8,6 +8,11 @@ No look-ahead: a pattern can only be acted on once its last turning point is
 confirmed (turning-point day + w). The signal day is therefore the first day,
 on or after that confirmation and before the book's deadline, on which the
 close is beyond the line.
+
+Forming patterns: when asked (all_patterns(..., setups=[])), each detector
+also records every complete shape as a Setup, with its status as of the last
+day: forming, broke out, failed or expired (see _track and forming.py).
+Setups never vote; asking for them leaves the signals unchanged.
 """
 from __future__ import annotations
 
@@ -15,7 +20,7 @@ import math
 
 import numpy as np
 
-from .signals import Signal
+from .signals import Setup, Signal
 from .turning_points import pips, rolling_window
 
 TOL = 0.04
@@ -57,6 +62,61 @@ def _first_break(close, start, known, deadline, line, d, opposite=None):
     return None
 
 
+def _track(setups, rule, close, start, known, deadline, breaks, height, points, *, opposite=None,
+           extreme=None, ok=None, fixed_target=None, extra=None):
+    """Follow a complete shape from its confirmation day and add a Setup to `setups`.
+
+    It uses the same test as _first_break, so "broke out" here always means the
+    detector made a Signal on that day. `breaks` is [(direction, line)].
+    `opposite` is the other line: closing across it first means the pattern
+    failed (as in _first_break). `extreme` is (direction, price): closing beyond
+    the pattern's extreme the wrong way also means it failed (tool choice; this
+    only sets the status and never changes the book's signals). `ok(e)` says
+    whether a break on day e falls inside the pattern's allowed window.
+    Shapes that are settled before their confirmation day were never visible,
+    so they are left out. Nothing is done when `setups` is None.
+    """
+    if setups is None:
+        return
+    n = len(close)
+    end = int(math.ceil(deadline))          # first day on which a break no longer counts
+    if ok is not None:
+        good = [e for e in range(max(start, known), end) if ok(e)]
+        if not good:
+            return                          # no day on which a break could count
+        end = min(end, good[-1] + 1)
+    status, when, why, bdir = "Forming", None, "", 0
+    for e in range(start, min(n, end)):
+        c = close[e]
+        if np.isnan(c):
+            continue
+        hit = [d for d, ln in breaks if (c > _lv(ln, e) if d > 0 else c < _lv(ln, e))]
+        if not hit:
+            d0 = breaks[0][0]
+            if opposite is not None and (c < _lv(opposite, e) if d0 > 0 else c > _lv(opposite, e)):
+                status, when, why = "Failed", e, "closed across the pattern's other line before breaking out"
+                break
+            if extreme is not None and (c < extreme[1] if extreme[0] > 0 else c > extreme[1]):
+                status, when, why = "Failed", e, "closed beyond the pattern's extreme before breaking out"
+                break
+        elif e >= known:
+            if ok is None or ok(e):
+                status, when, bdir = "Broke out", e, hit[0]
+            else:
+                status, when, why = "Failed", e, "broke out too early to count for this pattern"
+            break
+    else:
+        if end <= n - 1:
+            status, when, why = "Expired", end, "no breakout before the deadline"
+    if when is not None and when < known:
+        return
+    d = breaks[0][0] if len(breaks) == 1 else 0
+    setups.append(Setup(rule, d, int(known), int(end - 1), [(dd, tuple(map(float, ln))) for dd, ln in breaks],
+                        float(height), status, None if when is None else int(when), bdir, why,
+                        None if fixed_target is None else float(fixed_target),
+                        [(int(a), float(b), lab) for a, b, lab in points], dict(extra or {})))
+
+
 def _trend_label(trend_state, t):
     v = trend_state[t] if 0 <= t < len(trend_state) else 0
     return {1: "uptrend", -1: "downtrend"}.get(int(v), "sideways")
@@ -64,7 +124,7 @@ def _trend_label(trend_state, t):
 
 # ------------------------------------------------------- head and shoulders --
 
-def head_and_shoulders(close, s, trend_state):
+def head_and_shoulders(close, s, trend_state, setups=None):
     w = int(s["w_hs"])
     idx, pr, kd, kn = _locals(close, w)
     out = []
@@ -77,10 +137,12 @@ def head_and_shoulders(close, s, trend_state):
                     and tP2 - tP1 < 2.5 * (tP3 - tP2) and tP3 - tP2 < 2.5 * (tP2 - tP1)):
                 continue
             neck = _line(tT1, T1, tT2, T2)
+            H = P2 - _lv(neck, tP2); W = tP3 - tP1
+            _track(setups, "Head-and-shoulders top", close, tP3 + 1, kn[i + 4], tP3 + (tP3 - tP1), [(-1, neck)], H,
+                   zip(t, p, ["LS", "", "Head", "", "RS"]), extreme=(-1, P2))
             e = _first_break(close, tP3 + 1, kn[i + 4], tP3 + (tP3 - tP1), neck, -1)
             if e is None:
                 continue
-            H = P2 - _lv(neck, tP2); W = tP3 - tP1
             prior = ""
             if i >= 2 and kd[i - 2] == "P" and kd[i - 1] == "T":
                 P0, T0 = pr[i - 2], pr[i - 1]
@@ -97,10 +159,12 @@ def head_and_shoulders(close, s, trend_state):
                     and tT2 - tT1 < 2.5 * (tT3 - tT2) and tT3 - tT2 < 2.5 * (tT2 - tT1)):
                 continue
             neck = _line(tP1, P1, tP2, P2)
+            H = _lv(neck, tT2) - T2; W = tT3 - tT1
+            _track(setups, "Inverse head-and-shoulders", close, tT3 + 1, kn[i + 4], tT3 + (tT3 - tT1), [(+1, neck)], H,
+                   zip(t, p, ["LS", "", "Head", "", "RS"]), extreme=(+1, T2))
             e = _first_break(close, tT3 + 1, kn[i + 4], tT3 + (tT3 - tT1), neck, +1)
             if e is None:
                 continue
-            H = _lv(neck, tT2) - T2; W = tT3 - tT1
             out.append(Signal("Inverse head-and-shoulders", "reversal", "pattern", +1, e,
                               target=_lv(neck, e) + H, time_limit=e + W, line=neck,
                               points=[(a, b, l) for a, b, l in zip(t, p, ["LS", "", "Head", "", "RS"])],
@@ -112,7 +176,7 @@ def head_and_shoulders(close, s, trend_state):
 
 # ------------------------------------------------- triple and double tops --
 
-def triple_tops_bottoms(close, s, trend_state):
+def triple_tops_bottoms(close, s, trend_state, setups=None):
     w = int(s["w_triple"])
     idx, pr, kd, kn = _locals(close, w)
     out = []
@@ -126,10 +190,12 @@ def triple_tops_bottoms(close, s, trend_state):
                     and tP2 - tP1 < 2.5 * (tP3 - tP2) and tP3 - tP2 < 2.5 * (tP2 - tP1)):
                 continue
             lvl = (0.0, T1)
+            H = max(P1, P3) - T1; W = tP3 - tP1
+            _track(setups, "Triple top", close, tP3 + 1, kn[i + 4], tP3 + (tP3 - tP1), [(-1, lvl)], H,
+                   [(a, b, "") for a, b in zip(t, p)], extreme=(-1, max(peaks)))
             e = _first_break(close, tP3 + 1, kn[i + 4], tP3 + (tP3 - tP1), lvl, -1)
             if e is None:
                 continue
-            H = max(P1, P3) - T1; W = tP3 - tP1
             out.append(Signal("Triple top", "reversal", "pattern", -1, e, target=T1 - H, time_limit=e + W,
                               line=lvl, points=[(a, b, "") for a, b in zip(t, p)],
                               text="Triple top: close broke below the support at the first trough.",
@@ -142,10 +208,12 @@ def triple_tops_bottoms(close, s, trend_state):
                     and tT2 - tT1 < 2.5 * (tT3 - tT2) and tT3 - tT2 < 2.5 * (tT2 - tT1)):
                 continue
             lvl = (0.0, P1)
+            H = P1 - min(T1, T3); W = tT3 - tT1
+            _track(setups, "Triple bottom", close, tT3 + 1, kn[i + 4], tT3 + (tT3 - tT1), [(+1, lvl)], H,
+                   [(a, b, "") for a, b in zip(t, p)], extreme=(+1, min(tr)))
             e = _first_break(close, tT3 + 1, kn[i + 4], tT3 + (tT3 - tT1), lvl, +1)
             if e is None:
                 continue
-            H = P1 - min(T1, T3); W = tT3 - tT1
             out.append(Signal("Triple bottom", "reversal", "pattern", +1, e, target=P1 + H, time_limit=e + W,
                               line=lvl, points=[(a, b, "") for a, b in zip(t, p)],
                               text="Triple bottom: close broke above the resistance at the first peak.",
@@ -153,7 +221,7 @@ def triple_tops_bottoms(close, s, trend_state):
     return out
 
 
-def double_tops_bottoms(close, s, trend_state):
+def double_tops_bottoms(close, s, trend_state, setups=None):
     w = int(s["w_double"])
     idx, pr, kd, kn = _locals(close, w)
     out = []
@@ -164,10 +232,12 @@ def double_tops_bottoms(close, s, trend_state):
             if not (abs(P1 - P2) / min(P1, P2) <= TOL and (T1 - P1) / P1 <= -0.10):
                 continue
             lvl = (0.0, T1)
+            H = max(P1, P2) - T1; W = tP2 - tP1
+            _track(setups, "Double top", close, tP2 + 1, kn[i + 2], tP2 + (tP2 - tP1), [(-1, lvl)], H,
+                   [(a, b, "") for a, b in zip(t, p)], extreme=(-1, max(P1, P2)))
             e = _first_break(close, tP2 + 1, kn[i + 2], tP2 + (tP2 - tP1), lvl, -1)
             if e is None:
                 continue
-            H = max(P1, P2) - T1; W = tP2 - tP1
             out.append(Signal("Double top", "reversal", "pattern", -1, e, target=T1 - H, time_limit=e + W,
                               line=lvl, points=[(a, b, "") for a, b in zip(t, p)],
                               text="Double top: close broke below the trough between the two peaks.",
@@ -177,10 +247,12 @@ def double_tops_bottoms(close, s, trend_state):
             if not (abs(T1 - T2) / min(T1, T2) <= TOL and (P1 - T1) / T1 >= 0.10):
                 continue
             lvl = (0.0, P1)
+            H = P1 - min(T1, T2); W = tT2 - tT1
+            _track(setups, "Double bottom", close, tT2 + 1, kn[i + 2], tT2 + (tT2 - tT1), [(+1, lvl)], H,
+                   [(a, b, "") for a, b in zip(t, p)], extreme=(+1, min(T1, T2)))
             e = _first_break(close, tT2 + 1, kn[i + 2], tT2 + (tT2 - tT1), lvl, +1)
             if e is None:
                 continue
-            H = P1 - min(T1, T2); W = tT2 - tT1
             out.append(Signal("Double bottom", "reversal", "pattern", +1, e, target=P1 + H, time_limit=e + W,
                               line=lvl, points=[(a, b, "") for a, b in zip(t, p)],
                               text="Double bottom: close broke above the peak between the two troughs.",
@@ -218,7 +290,7 @@ def _apex(upper, lower):
     return (lower[1] - upper[1]) / (upper[0] - lower[0])
 
 
-def flags_pennants_wedges(close, s, trend_state):
+def flags_pennants_wedges(close, s, trend_state, setups=None):
     out = []
     thor = int(s["flag_prior_days"])
     for name, w in (("flag", int(s["w_flag"])), ("pennant", int(s["w_pennant"])), ("wedge", int(s["w_wedge"]))):
@@ -226,9 +298,9 @@ def flags_pennants_wedges(close, s, trend_state):
         for i in range(len(idx) - 3):
             seq = "".join(kd[i:i + 4]); t = idx[i:i + 4]; p = pr[i:i + 4]
             if seq == "PTPT":
-                sig = _bull(name, close, t, p, kn[i + 3], thor, trend_state)
+                sig = _bull(name, close, t, p, kn[i + 3], thor, trend_state, setups)
             elif seq == "TPTP":
-                sig = _bear(name, close, t, p, kn[i + 3], thor, trend_state)
+                sig = _bear(name, close, t, p, kn[i + 3], thor, trend_state, setups)
             else:
                 sig = None
             if sig is not None:
@@ -236,7 +308,7 @@ def flags_pennants_wedges(close, s, trend_state):
     return out
 
 
-def _bull(name, close, t, p, known, thor, trend_state):
+def _bull(name, close, t, p, known, thor, trend_state, setups=None):
     P1, T1, P2, T2 = p; tP1, tT1, tP2, tT2 = t
     # cheap shape checks first (the PIP search below is the slow part)
     sP_, sT_ = (P2 - P1) / (tP2 - tP1), (T2 - T1) / (tT2 - tT1)
@@ -258,6 +330,8 @@ def _bull(name, close, t, p, known, thor, trend_state):
                 and (math.isinf(ts) or abs(ts - (tP1 + tT2) / 2) > 5 * (tT2 - tP1))):
             return None
         deadline = min(tT2 + (tT2 - tP1), tP1 + 20 + 1)
+        _track(setups, "Bull flag", close, tT2 + 1, known, deadline, [(+1, upper)], P1 - S, _pts(prior, t, p),
+               opposite=lower, ok=lambda e: tP1 - tS > 2 * (e - tP1))
         e = _first_break(close, tT2 + 1, known, deadline, upper, +1, opposite=lower)
         if e is None or not (tP1 - tS > 2 * (e - tP1)):
             return None
@@ -269,6 +343,8 @@ def _bull(name, close, t, p, known, thor, trend_state):
             return None
         span = ts - tP1
         deadline = min(tP1 + 0.75 * span, tP1 + 20 + 1)
+        _track(setups, "Bull pennant", close, tT2 + 1, known, deadline, [(+1, upper)], P1 - S, _pts(prior, t, p),
+               opposite=lower, ok=lambda e: 0.5 * span < e - tP1 < 0.75 * span and e - tP1 <= 20 and tP1 - tS > 2 * (e - tP1))
         e = _first_break(close, tT2 + 1, known, deadline, upper, +1, opposite=lower)
         if e is None:
             return None
@@ -284,6 +360,8 @@ def _bull(name, close, t, p, known, thor, trend_state):
         return None
     span = ts - tP1
     deadline = min(tP1 + 0.8 * span, tP1 + 80 + 1)
+    _track(setups, "Falling wedge", close, tT2 + 1, known, deadline, [(+1, upper)], 0.0, _pts(prior, t, p),
+           opposite=lower, ok=lambda e: 20 <= e - tP1 <= 80 and 0.5 * span < e - tP1 < 0.8 * span, fixed_target=P1)
     e = _first_break(close, tT2 + 1, known, deadline, upper, +1, opposite=lower)
     if e is None:
         return None
@@ -294,7 +372,7 @@ def _bull(name, close, t, p, known, thor, trend_state):
                "Falling wedge: price broke above the wedge's upper line.", trend_state)
 
 
-def _bear(name, close, t, p, known, thor, trend_state):
+def _bear(name, close, t, p, known, thor, trend_state, setups=None):
     T1, P1, T2, P2 = p; tT1, tP1, tT2, tP2 = t
     sP_, sT_ = (P2 - P1) / (tP2 - tP1), (T2 - T1) / (tT2 - tT1)
     if name == "flag" and not (P2 > P1 and T2 > T1):
@@ -315,6 +393,8 @@ def _bear(name, close, t, p, known, thor, trend_state):
                 and (math.isinf(ts) or abs(ts - (tT1 + tP2) / 2) > 5 * (tP2 - tT1))):
             return None
         deadline = min(tP2 + (tP2 - tT1), tT1 + 20 + 1)
+        _track(setups, "Bear flag", close, tP2 + 1, known, deadline, [(-1, lower)], S - T1, _pts(prior, t, p),
+               opposite=upper, ok=lambda e: tT1 - tS > 2 * (e - tT1))
         e = _first_break(close, tP2 + 1, known, deadline, lower, -1, opposite=upper)
         if e is None or not (tT1 - tS > 2 * (e - tT1)):
             return None
@@ -326,6 +406,8 @@ def _bear(name, close, t, p, known, thor, trend_state):
             return None
         span = ts - tT1
         deadline = min(tT1 + 0.75 * span, tT1 + 20 + 1)
+        _track(setups, "Bear pennant", close, tP2 + 1, known, deadline, [(-1, lower)], S - T1, _pts(prior, t, p),
+               opposite=upper, ok=lambda e: 0.5 * span < e - tT1 < 0.75 * span and e - tT1 <= 20 and tT1 - tS > 2 * (e - tT1))
         e = _first_break(close, tP2 + 1, known, deadline, lower, -1, opposite=upper)
         if e is None:
             return None
@@ -340,6 +422,8 @@ def _bear(name, close, t, p, known, thor, trend_state):
         return None
     span = ts - tT1
     deadline = min(tT1 + 0.8 * span, tT1 + 80 + 1)
+    _track(setups, "Rising wedge", close, tP2 + 1, known, deadline, [(-1, lower)], 0.0, _pts(prior, t, p),
+           opposite=upper, ok=lambda e: 20 <= e - tT1 <= 80 and 0.5 * span < e - tT1 < 0.8 * span, fixed_target=T1)
     e = _first_break(close, tP2 + 1, known, deadline, lower, -1, opposite=upper)
     if e is None:
         return None
@@ -350,8 +434,12 @@ def _bear(name, close, t, p, known, thor, trend_state):
                "Rising wedge: price broke below the wedge's lower line.", trend_state)
 
 
+def _pts(prior, t, p):
+    return [(a, b, "prior") for a, b in prior] + [(a, b, "") for a, b in zip(t, p)]
+
+
 def _mk(rule, d, e, target, tl, line, t, p, prior, text, trend_state):
-    pts = [(a, b, "prior") for a, b in prior] + [(a, b, "") for a, b in zip(t, p)]
+    pts = _pts(prior, t, p)
     return Signal(rule, "reversal", "pattern", d, int(e), target=float(target), time_limit=int(tl),
                   line=line, points=pts, text=text,
                   extra={"trend_before": _trend_label(trend_state, int(t[0]))})
@@ -462,7 +550,7 @@ def _flat(v):
     return (max(v) - min(v)) / min(v) <= TOL
 
 
-def triangles_rectangles(close, s, trend_state):
+def triangles_rectangles(close, s, trend_state, setups=None):
     """Ascending, descending and symmetrical triangles and rectangles.
 
     Shape: five alternating turning points, as in Lo, Mamaysky & Wang (2000)
@@ -514,7 +602,11 @@ def triangles_rectangles(close, s, trend_state):
             H = _lv(upper, t1) - _lv(lower, t1)
             if H <= 0:
                 continue
+            rule = {"asc": "Ascending triangle", "desc": "Descending triangle",
+                    "sym": "Symmetrical triangle", "rect": "Rectangle"}[kind]
+            pts = [(a, b, "") for a, b in zip(t, p)]
             if kind == "rect":
+                _track(setups, rule, close, max(t5 + 1, known), known, t5 + W, [(+1, upper), (-1, lower)], H, pts)
                 e, d = _first_break_either(close, t5 + 1, known, t5 + W, upper, lower)
             else:
                 ts = _apex(upper, lower)
@@ -522,6 +614,14 @@ def triangles_rectangles(close, s, trend_state):
                     continue
                 span = ts - t1
                 deadline = t1 + 0.75 * span
+                late = lambda e: e - t1 > 0.5 * span
+                if kind == "sym":
+                    _track(setups, rule, close, max(t5 + 1, known), known, deadline, [(+1, upper), (-1, lower)], H,
+                           pts, ok=late)
+                elif kind == "asc":
+                    _track(setups, rule, close, t5 + 1, known, deadline, [(+1, upper)], H, pts, opposite=lower, ok=late)
+                else:
+                    _track(setups, rule, close, t5 + 1, known, deadline, [(-1, lower)], H, pts, opposite=upper, ok=late)
                 if kind == "sym":
                     e, d = _first_break_either(close, t5 + 1, known, deadline, upper, lower)
                 elif kind == "asc":
@@ -530,8 +630,6 @@ def triangles_rectangles(close, s, trend_state):
                     d = -1; e = _first_break(close, t5 + 1, known, deadline, lower, -1, opposite=upper)
                 if e is None or not e - t1 > 0.5 * span:
                     continue
-            rule = {"asc": "Ascending triangle", "desc": "Descending triangle",
-                    "sym": "Symmetrical triangle", "rect": "Rectangle"}[kind]
             if e is None or (rule, e, d) in seen:
                 continue                    # two overlapping five-point windows can find the same breakout
             seen.add((rule, e, d))
@@ -546,7 +644,7 @@ def triangles_rectangles(close, s, trend_state):
 
 # --------------------------------------------------------- cup and handle --
 
-def cup_and_handle(close, s, trend_state):
+def cup_and_handle(close, s, trend_state, setups=None):
     """Cup and handle (O'Neil). Bullish only.
 
     Two peaks (the rims) within TOL (4%) of each other, 7 to 65 weeks apart, with
@@ -594,6 +692,9 @@ def cup_and_handle(close, s, trend_state):
             if fit < tfit:
                 continue
             max_handle = max(w, min(40, width // 2))
+            _track(setups, "Cup and handle", close, tR + 1, int(pkn[c]), tR + max_handle + 1, [(+1, (0.0, PR))], depth,
+                   [(tL, PL, "left rim"), (tB, B, "bottom"), (tR, PR, "right rim")],
+                   opposite=(0.0, PR - 0.5 * depth), extra={"fit": fit})
             e = _first_break(close, tR + 1, int(pkn[c]), tR + max_handle + 1, (0.0, PR), +1,
                              opposite=(0.0, PR - 0.5 * depth))
             if e is None:
@@ -659,18 +760,23 @@ def islands(high, low, close, s, trend_state):
     return out
 
 
-def all_patterns(close, s, trend_state, high=None, low=None) -> list[Signal]:
+def all_patterns(close, s, trend_state, high=None, low=None, setups=None) -> list[Signal]:
     """Every chart pattern. Island reversals need daily highs and lows; without
-    them (the random-price tests use closes only) they are left out."""
+    them (the random-price tests use closes only) they are left out.
+
+    If `setups` is a list, every complete shape is also added to it as a Setup
+    with its status (forming, broke out, failed or expired). Setups never vote.
+    Rounding tops and bottoms and islands are only defined on the day they
+    complete, so they have no forming stage and no Setup."""
     close = np.asarray(close, float)
     sigs = []
-    sigs += head_and_shoulders(close, s, trend_state)
-    sigs += triple_tops_bottoms(close, s, trend_state)
-    sigs += double_tops_bottoms(close, s, trend_state)
-    sigs += flags_pennants_wedges(close, s, trend_state)
+    sigs += head_and_shoulders(close, s, trend_state, setups)
+    sigs += triple_tops_bottoms(close, s, trend_state, setups)
+    sigs += double_tops_bottoms(close, s, trend_state, setups)
+    sigs += flags_pennants_wedges(close, s, trend_state, setups)
     sigs += rounding(close, s, trend_state)
-    sigs += triangles_rectangles(close, s, trend_state)
-    sigs += cup_and_handle(close, s, trend_state)
+    sigs += triangles_rectangles(close, s, trend_state, setups)
+    sigs += cup_and_handle(close, s, trend_state, setups)
     if high is not None and low is not None:
         sigs += islands(np.asarray(high, float), np.asarray(low, float), close, s, trend_state)
     for g in sigs:

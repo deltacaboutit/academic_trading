@@ -19,6 +19,7 @@ Each time you analyse a stock, the tool runs the frameworks from your design doc
 
 - **Signal:** a rule saying "buy" or "sell" on a particular day.
 - **Live:** a signal still counts in the rating, usually for 10 trading days, or until its pattern trade closes.
+- **Forming pattern:** a chart pattern whose shape is complete but whose price has not yet closed beyond its line. It is shown on the Chart and Signals tabs as a heads-up only: it has **no vote** in the rating until it breaks out. It can then end as Failed (price went the wrong way first), Expired (no breakout in time) or Confirmed (it broke out and became a signal), and a confirmed pattern's trade ends at Target reached, Stopped out or Time limit reached.
 - **Hit rate:** the share of signals after which the price moved the predicted way.
 - **p-value:** the chance a result this good would appear by luck alone. Below 0.05 is the usual cut-off.
 - **Buy-and-hold:** simply owning the stock. Each rule must do better than this to be worth using.

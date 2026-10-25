@@ -10,6 +10,7 @@ from . import data as D
 from .cleaning import clean
 from .gauges import gauge_signals, gauge_values
 from .gex import gex_signals
+from .forming import forming_now, status_counts
 from .patterns import all_patterns
 from .rating import RATING_NAME, live_votes, rating_signals, run_rating
 from .sentiment import extreme_info, sentiment_signals
@@ -77,7 +78,8 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
     gv = gauge_values(c, s)
     sig_gauge = gauge_signals(c, s, gv)
     sig_zone, zone_events, zone_hist = zone_analysis(c, s)
-    sig_pat = _dedupe(all_patterns(c, s, state, df["High"].to_numpy(float), df["Low"].to_numpy(float)))
+    setups: list = []                 # complete shapes and their status; they never vote
+    sig_pat = _dedupe(all_patterns(c, s, state, df["High"].to_numpy(float), df["Low"].to_numpy(float), setups=setups))
     for sg in sig_pat:
         tr = pattern_trade(sg, o, c, s)
         sg.extra["trade"] = tr
@@ -191,6 +193,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         "sentiment_series": series, "sentiment_status": sent_status, "extremes": extremes,
         "rating": rating_df, "rating_now": RATING_NAME[cur], "votes": votes, "plan": plan,
         "results": res, "passes": passes, "pattern_outcomes": pattern_outcomes(sig_pat, n, s),
+        "setups": setups, "forming": forming_now(setups), "pattern_status": status_counts(setups, sig_pat),
         "allowed": allowed, "gex": gex_lv, "gex_signals": sig_gex,
         "lmw_detections": lmw_det, "lmw_signals": sig_lmw, "lmw_settings": lset, "lmw_info": lmw_info,
         "rating_b": rating_b, "rating_c": rating_c, "variants": variants,
