@@ -23,10 +23,17 @@ def clean(raw: pd.DataFrame, s: dict, calendar: pd.DatetimeIndex | None = None):
       ret      - daily simple return of the cleaned close
       ret_win  - the same return, winsorized at the rolling 3-sigma limits
                  (used by the statistical tests; prices are NOT changed)
+
+    Intraday bars (for example hourly ones, which have times of day) keep their times.
+    For them a bar is removed if its DAY was not a trading day, and missing bars are not
+    filled in, because the market's opening hours vary (half days); the 5%-missing rule
+    is then not checked.
     """
+    from .data import is_intraday
+    intraday = is_intraday(raw.index)
     log: list[dict] = []
     df = raw[["Open", "High", "Low", "Close", "Volume"]].astype(float).copy()
-    df.index = pd.DatetimeIndex(df.index).normalize()
+    df.index = pd.DatetimeIndex(df.index) if intraday else pd.DatetimeIndex(df.index).normalize()
     df = df[~df.index.duplicated(keep="last")].sort_index()
 
     def note(date, check, action, detail=""):
@@ -34,7 +41,7 @@ def clean(raw: pd.DataFrame, s: dict, calendar: pd.DatetimeIndex | None = None):
 
     # --- 1. Logical checks -------------------------------------------------
     cal = calendar if calendar is not None else trading_days(df.index[0], df.index[-1])
-    closed = df.index.difference(cal)
+    closed = df.index[~df.index.normalize().isin(cal)] if intraday else df.index.difference(cal)
     for d in closed:
         note(d, "Market closed that day", "Row removed")
     df = df.drop(closed)
@@ -75,7 +82,7 @@ def clean(raw: pd.DataFrame, s: dict, calendar: pd.DatetimeIndex | None = None):
              f"{(cc[d] / prev[d] - 1):+.1%}")
 
     # --- 3. Missing values -------------------------------------------------
-    full = cal[(cal >= df.index[0]) & (cal <= df.index[-1])]
+    full = df.index if intraday else cal[(cal >= df.index[0]) & (cal <= df.index[-1])]
     missing_days = full.difference(df.index)
     df = df.reindex(full)
     miss = df["Close"].isna()

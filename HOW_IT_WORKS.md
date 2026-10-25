@@ -31,6 +31,8 @@ The **Pattern guide** tab explains every chart pattern with a textbook example, 
 
 ### Things to keep in mind
 
+- The sidebar can switch to **weekly** or **hourly** bars, or analyse your own **CSV price file**. With weekly or hourly bars, every number of days in the settings counts bars instead, and the options-sentiment rules are switched off. The books only tested daily bars.
+
 - Both books found that most technical rules **did not** reliably beat buy-and-hold once costs and chance were taken into account. Support-zone bounces were the strongest finding, and even they did not beat buy-and-hold.
 - Patterns also appear in random prices. Try the `DEMO` ticker: its prices are simulated, yet the tool still finds patterns and "signals" in them.
 - Ratings use daily closing prices. Check them after 4:00 pm New York time.

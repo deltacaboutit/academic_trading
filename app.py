@@ -47,25 +47,37 @@ if "settings" not in st.session_state:
 S = st.session_state.settings
 
 
+BARS = {"Daily": "day", "Weekly": "week", "Hourly": "hour"}
+
+
 @st.cache_data(show_spinner=False, ttl=6 * 3600)
-def cached_analyze(ticker: str, settings_json: str, day: str, refresh_token: int):
-    return analyze(ticker, json.loads(settings_json), refresh=refresh_token > 0)
+def cached_analyze(ticker: str, settings_json: str, day: str, refresh_token: int, bar: str = "day"):
+    return analyze(ticker, json.loads(settings_json), refresh=refresh_token > 0, bar=bar)
 
 
-def run(ticker, refresh=False):
+@st.cache_data(show_spinner=False, ttl=6 * 3600, max_entries=5)
+def cached_analyze_csv(content: bytes, name: str, settings_json: str, bar: str):
+    from atrade.data import parse_price_csv
+    out = analyze(name, json.loads(settings_json), prices=parse_price_csv(content), bar=bar)
+    out["source"] = f"Your file {name}.csv"
+    return out
+
+
+def run(ticker, refresh=False, bar="day", upload=None):
     tok = int(dt.datetime.now().timestamp()) if refresh else 0
     with st.spinner(f"Analysing {ticker} ..."):
-        return cached_analyze(ticker, json.dumps(S, sort_keys=True), dt.date.today().isoformat(), tok)
+        if upload is not None:
+            return cached_analyze_csv(upload[1], upload[0], json.dumps(S, sort_keys=True), bar)
+        return cached_analyze(ticker, json.dumps(S, sort_keys=True), dt.date.today().isoformat(), tok, bar)
 
 
 def date_of(res, i):
     """Date of day number i; days after the last close are counted forward in trading days."""
-    idx = res["df"].index
     if i is None:
         return None
-    if 0 <= i < len(idx):
-        return idx[i].date()
-    return (idx[-1] + pd.tseries.offsets.BDay(i - (len(idx) - 1))).date()
+    from atrade.data import bar_date
+    d = bar_date(res["df"].index, i, res.get("bar", "day"))
+    return d if res.get("bar") == "hour" and i < len(res["df"]) else d.date()   # hourly bars keep their time of day
 
 
 def twin_verdict(o) -> str:
@@ -108,20 +120,32 @@ with st.sidebar:
     go_btn = c1.button("Analyse", type="primary", width="stretch")
     refresh = c2.button("Re-download", width="stretch",
                         help="Ignore today's saved copy and download fresh prices.")
+    bar_name = st.radio("Bar size", list(BARS), horizontal=True,
+                        help="Daily is the books' setting. Weekly combines each week's days into one bar. Hourly uses "
+                             "Yahoo Finance's hourly prices (about the last two years). With weekly or hourly bars every "
+                             "number of days in the settings counts bars instead.")
+    bar = BARS[bar_name]
+    up = st.file_uploader("Or analyse your own CSV price file", type=["csv"],
+                          help="Columns: Date, Open, High, Low, Close and (if you have it) Volume. Daily or hourly rows. "
+                               "The file's name is used as the ticker, for example AAPL.csv, so the tool can add that "
+                               "stock's options data.")
+    upload = (Path(up.name).stem.upper(), up.getvalue()) if up is not None else None
     st.caption("Prices: Yahoo Finance, adjusted for splits and dividends. "
                "Ratings use closing prices, so check after 4:00 pm New York time.")
     if ON_CLOUD:
         st.info("**Online version.** Changes you make to settings or the watch list last until you close "
                 "this page. The app picks up new data a few minutes after GitHub is updated.")
 
-if go_btn or refresh or "res" not in st.session_state or st.session_state.get("ticker") != ticker:
-    if ticker:
+want = (upload[0] if upload else ticker, bar, bool(upload))
+if go_btn or refresh or "res" not in st.session_state or st.session_state.get("want") != want:
+    if ticker or upload:
         try:
-            st.session_state.res = run(ticker, refresh=refresh)
+            st.session_state.res = run(want[0], refresh=refresh, bar=bar, upload=upload)
             st.session_state.ticker = ticker
+            st.session_state.want = want
             st.session_state.err = None
         except Exception as e:
-            st.session_state.err = f"Could not analyse {ticker}: {e}"
+            st.session_state.err = f"Could not analyse {want[0]}: {e}"
             st.session_state.res = None
 
 res = st.session_state.get("res")
@@ -142,6 +166,12 @@ h1.caption(f"Last close {df['Close'].iloc[-1]:,.2f} on {last_day:%a %d %b %Y} ·
 ny = dt.datetime.now(ZoneInfo("America/New_York"))
 if last_day == ny.date() and ny.hour < 16:
     h2.warning("Today's prices are not final until the market closes at 4:00 pm New York time.")
+if res.get("bar", "day") != "day":
+    unit = {"week": "week", "hour": "hour"}[res["bar"]]
+    st.info(f"**{unit.capitalize()}ly bars.** Every number of days in this analysis (turning-point windows, holding "
+            f"periods, time limits, 'live' days) counts {unit}s instead. The options-sentiment and GEX rules use daily "
+            "options data, so they are switched off, and the stored random-price test is not used. The books tested "
+            "daily bars only, so treat these results as exploratory.")
 if not res["quality"]["passed"]:
     h2.error(f"Data check failed: {res['quality']['worst_year_missing']:.1%} of trading days were missing in "
              f"{res['quality']['worst_year']} (limit 5%). Treat this rating with extra caution.")

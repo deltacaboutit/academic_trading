@@ -31,13 +31,11 @@ def change(a, b) -> str:
 
 
 def _date(res, i):
-    idx = res["df"].index
     if i is None:
         return "n/a"
-    if 0 <= i < len(idx):
-        return f"{idx[i]:%d %b %Y}"
-    import pandas as pd
-    return f"{idx[-1] + pd.tseries.offsets.BDay(i - (len(idx) - 1)):%d %b %Y}"
+    from .data import bar_date
+    d = bar_date(res["df"].index, i, res.get("bar", "day"))
+    return f"{d:%d %b %Y %H:%M}" if res.get("bar") == "hour" and i < len(res["df"]) else f"{d:%d %b %Y}"
 
 
 def _days_ago(n, i):
@@ -297,7 +295,8 @@ def summary_text(res) -> str:
     df = res["df"]
     n = len(df)
     c = df["Close"].to_numpy(float)
-    L = [f"**{res['ticker']}**: {n:,} trading days from {_date(res, 0)} to {_date(res, n - 1)}. "
+    from .data import BAR_UNITS
+    L = [f"**{res['ticker']}**: {n:,} {BAR_UNITS.get(res.get('bar', 'day'), 'trading day')}s from {_date(res, 0)} to {_date(res, n - 1)}. "
          f"Latest close {price(c[-1])}.", "",
          f"**Today's rating: {res['rating_now']}.** The rating combines trend, reversal and sentiment signals "
          "(Framework 7). The Rating tab shows every signal that counts today.", "", "**What the indicators say**"]
