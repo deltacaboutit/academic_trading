@@ -85,3 +85,21 @@ Line numbers below are in **PatternFinder2.5** unless a path starts with `atrade
 
 ## Suggested first prompt for the next session
 > Read `.claude/handoffs/2026-10-25-checkpoint-merge-patternfinder-into-academic-trading.md` in academic_trading, then the linked files in both repos. Ask me the pending decisions first. Then start step 1, "Forming" patterns and statuses: propose a design that fits academic_trading's `Signal` and no-look-ahead rules before writing code, and work on a new branch.
+
+## Outcome (later on 2026-10-25): every feature on the list is ported
+All work is on branch `claude/adoring-brahmagupta-ncyn0o`, which is stacked on `add-patternfinder-patterns` (pull request deltacaboutit/academic_trading#5). `python -m pytest -q tests` gives 87 passed.
+
+Decisions the user made: open the step-0 pull request and keep stacking; statuses for all patterns; pattern-specific stops as a variant (the book's 2-close/4% rule stays the default); keep PatternFinder2.5 usable until its v2.5 results are back. The user did not ask for the "Counts until" pyarrow warning to be fixed or for PatternFinder2.5's `__pycache__` to be removed, so both are untouched.
+
+| Step | Commit | Where |
+|---|---|---|
+| 1a Forming patterns and statuses | `5bb243c` | `Setup` in `atrade/signals.py`, `_track` in `atrade/patterns.py`, `atrade/forming.py`; README choice 21 |
+| 1b-d Plain-English text, Pattern guide, indicator sentences | `f5aacc0` | `atrade/report.py`, `atrade/pattern_info.py`, `atrade/examples.py`; Pattern guide tab (pictures are drawn live with plotly from the examples) |
+| 2 ATR, OBV, 21 textbook checks | `c3e95a8` | `atrade/indicators.py`, `atrade/confirm.py` (same keys and thresholds as PatternFinder 2.5); README choice 22 |
+| 3 Random twins, realistic fills, variants (incl. pattern stops), statistics | `cd89793` | `atrade/twins.py`, `atrade/edge_stats.py`, `research.twin_summary`; README choice 23 |
+| 4 Weekly and hourly bars, CSV files | `288b343` | `atrade/data.py`, `atrade/cleaning.py`, sidebar; README choice 24 |
+
+Still open:
+- `confirm.PROVEN` is empty. Fill it only with checks marked HELPS in `results/summary/twins_checks.csv` after the next research run (or in PatternFinder2.5's v2.5 `summary.txt`, which uses the same check keys).
+- The random-twin tables appear on the All stocks tab after the next "Research run (all stocks)" GitHub Action.
+- PatternFinder2.5 can be archived once the user is happy, after removing its `pattern_core/__pycache__/`.
