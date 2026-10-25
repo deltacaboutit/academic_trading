@@ -112,7 +112,7 @@ still copies any day the collector missed completely, and never touches a day th
 | What | Where | Contents |
 | --- | --- | --- |
 | **Full chain, one file per stock** | `SPY.parquet`, `AAPL.parquet`, … on the GitHub Release **[options-data](https://github.com/deltacaboutit/academic_trading/releases/tag/options-data)**, grouped into 27 zip bundles by first letter (`chains_A.zip` …) because GitHub allows a workflow only 1,000 requests an hour. | Every contract on every day, appended: date, ticker, spot, expiry_str, strike, is_call, iv, iv_filled, oi, volume, T, bid, ask, last_price, source. |
-| **Daily summary** | `options_data/summary/2026-10.parquet`, … (in git, one small file per month) | One row per stock per day: spot, put and call open interest and volume, put/call ratios from both, average IV, Watchtower's 30-day IV (Watchtower days only), total GEX, gamma flip, call wall and put wall. |
+| **Daily summary** | `options_data/summary/2026-10.parquet`, … (in git, one small file per month) | One row per stock per day: spot, put and call open interest and volume, put/call ratios from both, average IV, 30-day IV index (`ivx_30d`), total GEX, gamma flip, call wall and put wall. |
 | Bookkeeping | `options_data/collect_state.json`, `universe.txt`, `rate.json`, `watchtower_state.json` | Each collected day's count and failures, the stock list, the latest 3-month T-bill rate, and which Watchtower days were copied. |
 
 **Why a Release and not the repo itself?** Git keeps a full copy of every version of every file. One file per stock
@@ -158,7 +158,13 @@ The inbox appears after the first nightly sync run. On your own computer, the sa
 
 - Watchtower's chains include **real volume from June 2, 2026**. Days before that (your older files) have **open interest only**. Where there isn't yet enough real-volume history, the stock-level systems use **put open interest ÷ call open interest** instead. The same applies to Squeeze Play I, which uses a market-wide ratio built from all the S&P 500 stocks. These versions are labelled **"open-interest substitute"**.
 - Once the real-volume version has enough history (60 days for Tsunami and Squeeze Play I, 110 for Squeeze Play II), it takes over the vote. The substitute keeps being back-tested alongside it, so you can compare the two.
-- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix. GEX levels: see *How the GEX levels are calculated* below.
+- The stock's average implied volatility is the plain average over the contracts that traded that day, after the junk-IV fix.
+- The **30-day IV index** (`ivx_30d`, in percent) is a cleaner measure of the stock's implied volatility, using Watchtower's method
+  (the Livevol method): take the two expiries either side of 30 days; for each, average the implied volatility of the 4 calls and
+  4 puts with strikes nearest the price, weighting each by its vega (how much its price reacts to a change in implied volatility);
+  then blend the two expiries by the square root of their days to expiry. Watchtower's own value is kept on the days copied from
+  it; the daily collector calculates it from the chain on every other day. On the days where both exist, the two agree to within
+  a few hundredths of a point. GEX levels: see *How the GEX levels are calculated* below.
 
 ### GEX (gamma exposure) — an add-on, not from the books
 
