@@ -18,7 +18,8 @@ otherwise the previous trading day. A stock that already has the session is skip
 evening run and the catch-up runs only fetch what is still missing.
 
 Then, as for every other source: junk IVs are filled (options_store.clean_iv), the day is appended
-to the stock's file, and the summary gets put/call ratios, average IV and the GEX levels
+to the stock's file, and the summary gets put/call ratios, average IV, the 30-day IV index
+(options_store.ivx) and the GEX levels
 (gex.daily_levels, Watchtower's method, using FRED's 3-month T-bill rate).
 """
 from __future__ import annotations

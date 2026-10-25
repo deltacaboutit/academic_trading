@@ -88,6 +88,22 @@ def test_summary_upsert_monthly_files_and_ratios(tmp_path):
     assert r["pc_volume"] == pytest.approx(g[~g.is_call].volume.sum() / g[g.is_call].volume.sum())
     OS.upsert_summary(s, tmp_path)
     assert len(OS.read_summary(store=tmp_path)) == len(s)
+    assert s["ivx_30d"].between(20, 30).all()                # fake chains have IV ~25%
+
+
+def test_ivx_blends_the_two_expiries_around_30_days():
+    rows = []
+    for e, d, iv in (("2026-01-12", 7, 0.50), ("2026-01-25", 20, 0.20), ("2026-02-14", 40, 0.40),
+                     ("2026-03-20", 74, 0.90)):
+        for K in (80.0, 95, 99, 100, 101, 105, 120):
+            for c in (True, False):
+                rows.append({"expiry_str": e, "T": d / 365, "strike": K, "is_call": c,
+                             "iv": 3.0 if K in (80, 120) else iv})          # far strikes must be ignored
+    ch = pd.DataFrame(rows)
+    w = (np.sqrt(40) - np.sqrt(30)) / (np.sqrt(40) - np.sqrt(20))
+    assert OS.ivx(ch, 100.0) == pytest.approx(100 * (w * 0.20 + (1 - w) * 0.40))
+    assert OS.ivx(ch[ch["T"] > 50 / 365], 100.0) == pytest.approx(90.0)       # no extrapolation
+    assert np.isnan(OS.ivx(ch.assign(iv=np.nan), 100.0))
 
 
 # ------------------------------------------------------------------ GEX ---

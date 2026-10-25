@@ -98,6 +98,50 @@ def clean_iv(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def ivx(chain_one: pd.DataFrame, spot: float, rate: float = 0.045, target_days: int = 30,
+        n_strikes: int = 4) -> float:
+    """IV index in PERCENT (25.0 == 25%) for one stock on one day - Watchtower's
+    calculate_iv_index (Livevol method), worked out from the stored chain:
+      1. take the two expiries either side of target_days (same-day expiries skipped),
+      2. for each, the vega-weighted IV of the n_strikes calls nearest to spot and
+         of the n_strikes puts nearest to spot, averaged,
+      3. blend the two expiries by square-root-of-days (no extrapolation).
+    Days to expiry are T * 365, T measured from the session's close."""
+    if not np.isfinite(spot) or spot <= 0:
+        return np.nan
+    c = chain_one[(chain_one["iv"] > IV_JUNK_LOW) & (chain_one["iv"] < IV_JUNK_HIGH)]
+    days = c.groupby("expiry_str")["T"].first() * 365
+    days = days[days >= 0.5].sort_values()
+    if days.empty:
+        return np.nan
+    near, far = days[days <= target_days], days[days >= target_days]
+    if near.empty:
+        pick = days.iloc[:2]
+    elif far.empty:
+        pick = days.iloc[-2:]
+    else:
+        pick = pd.concat([near.iloc[-1:], far.iloc[:1]])
+
+    def side_iv(df, T):
+        df = df.loc[(df["strike"] - spot).abs().nsmallest(n_strikes).index]
+        K, s = df["strike"].to_numpy(float), df["iv"].to_numpy(float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            d1 = (np.log(spot / K) + (rate + 0.5 * s * s) * T) / (s * np.sqrt(T))
+            vega = np.nan_to_num(spot * np.sqrt(T) * np.exp(-0.5 * d1 * d1))
+        return float(np.sum(vega * s) / vega.sum()) if vega.sum() > 0 else float(s.mean())
+
+    ivs = []
+    for e, d in pick.items():
+        g = c[c["expiry_str"] == e]
+        sides = [side_iv(g[g["is_call"] == k], d / 365) for k in (True, False) if (g["is_call"] == k).any()]
+        ivs.append(100 * float(np.mean(sides)))
+    if len(ivs) == 1 or pick.iloc[0] == pick.iloc[-1]:
+        return ivs[0]
+    sn, sf = np.sqrt(pick.iloc[0]), np.sqrt(pick.iloc[-1])
+    w = float(np.clip((sf - np.sqrt(target_days)) / (sf - sn), 0.0, 1.0))
+    return w * ivs[0] + (1 - w) * ivs[1]
+
+
 def normalize_chain(df: pd.DataFrame, source: str) -> pd.DataFrame:
     df = df.copy()
     df.attrs = {}
@@ -207,14 +251,17 @@ def summarize(chain: pd.DataFrame, features: pd.DataFrame | None = None, gex_sca
         r = {"date": d, "ticker": t, "spot": spot, "call_oi": coi, "put_oi": poi,
              "pc_oi": poi / coi if coi > 0 else np.nan, "call_volume": cv, "put_volume": pv,
              "pc_volume": pv / cv if (has_vol and cv > 0) else np.nan,
-             "avg_iv": float(ivok["iv"].mean()) if len(ivok) else np.nan, "n_contracts": len(g),
+             "avg_iv": float(ivok["iv"].mean()) if len(ivok) else np.nan,
+             "ivx_30d": ivx(g, spot, rate) if "T" in g else np.nan, "n_contracts": len(g),
              "source": str(g["source"].iloc[-1])}
         if feat is not None and (d, t) in feat.index:
             f = feat.loc[(d, t)]
             r.update({"spot": f.get("spot", spot), "gex_total": f.get("gex_total"), "gex_flip": f.get("flip_level"),
                       "call_wall_price": f.get("call_wall"), "call_wall_gex": f.get("call_wall_gex"),
                       "put_wall_price": f.get("put_wall"), "put_wall_gex": f.get("put_wall_gex"),
-                      "ivx_30d": f.get("ivx_30d"), "gex_source": "watchtower"})
+                      "gex_source": "watchtower"})
+            if pd.notna(f.get("ivx_30d")):                   # Watchtower's own value where it has one
+                r["ivx_30d"] = f.get("ivx_30d")
             # walls at strikes (README "GEX levels"); Watchtower's flip and total GEX are kept
             r.update(G.strike_walls(G._filtered(g), r["spot"], rate)); r["wall_method"] = "strike"
         elif compute_gex and g["iv"].notna().any() and np.isfinite(spot):
