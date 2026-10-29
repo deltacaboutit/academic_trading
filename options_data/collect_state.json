@@ -75,5 +75,18 @@
   },
   "last_run": "2026-10-29T08:07-04:00",
   "minutes": 10.4
+ },
+ "2026-10-29": {
+  "stocks": 516,
+  "collected": 511,
+  "failed": {
+   "AVB": "ValueError: no price history",
+   "EA": "ValueError: no price history",
+   "EQR": "ValueError: no price history",
+   "PSKY": "ValueError: Yahoo's latest close is 2026-10-16, not 2026-10-29 yet",
+   "WBD": "ValueError: no price history"
+  },
+  "last_run": "2026-10-29T17:48-04:00",
+  "minutes": 28.4
  }
 }
