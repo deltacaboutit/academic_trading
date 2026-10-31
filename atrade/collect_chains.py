@@ -15,8 +15,8 @@ so it does not depend on when the collector happens to run (tool choice).
 
 Session day: the NYSE trading day whose close has passed (4:15 pm New York time or later),
 otherwise the previous trading day. A stock that already has the session is skipped, so the
-evening run and the catch-up runs only fetch what is still missing. A stock that failed on 5 sessions
-in a row (e.g. delisted, or Yahoo stopped serving it) is skipped, so it doesn't make every catch-up
+evening run and the morning catch-up only fetch what is still missing. A stock that failed on 5 sessions
+in a row (e.g. delisted, or Yahoo stopped serving it) is skipped, so it doesn't make the catch-up
 run do the full job; it gets one try on the first session of each week, and is collected again once
 it works. --force and --tickers ignore the skip.
 
