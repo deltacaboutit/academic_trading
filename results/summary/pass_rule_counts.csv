@@ -1,36 +1,43 @@
 rule,Not passed,Not testable (no null model fits),Passed,Passed steps 2 + 7 (step 3 not applicable),Too few signals
-Alexander 5% filter,435,68,3,0,1
+Alexander 5% filter,436,67,3,0,1
+Ascending triangle,0,0,0,0,431
 Bear flag,0,0,0,0,344
 Bear pennant,0,0,0,0,121
-Bollinger 20/2.0,435,68,2,0,2
-Breakout 20-day,438,68,1,0,0
-Breakout 50-day,439,67,0,0,1
+Bollinger 20/2.0,436,67,2,0,2
+Breakout 20-day,439,67,1,0,0
+Breakout 50-day,440,66,0,0,1
 Bull flag,1,0,0,0,446
 Bull pennant,0,0,0,0,253
+Cup and handle,0,0,0,0,248
+Descending triangle,0,0,0,0,298
 Double bottom,10,1,0,0,490
 Double top,7,0,0,0,480
 Falling wedge,0,0,0,0,69
 Fast volatility swing (VIX),500,0,0,7,0
 Head-and-shoulders top,10,0,0,0,486
 Inverse head-and-shoulders,6,1,0,0,493
-MA crossover 10/50,430,68,6,0,3
-MACD 12/26/9,437,68,2,0,0
-Momentum 12/9,438,68,1,0,0
-Official rating (variant A),499,0,0,4,4
-Price vs SMA 10,436,68,3,0,0
-Price vs SMA 200,426,66,4,0,11
-Price vs SMA 50,433,68,6,0,0
-ROC 12,430,68,9,0,0
-RSI 14,433,68,6,0,0
-Resistance bounce,285,44,5,0,156
+Island bottom,12,0,0,2,455
+Island top,17,0,0,0,468
+MA crossover 10/50,431,67,6,0,3
+MACD 12/26/9,438,67,2,0,0
+Momentum 12/9,439,67,1,0,0
+Official rating (variant A),500,0,0,3,4
+Price vs SMA 10,437,67,3,0,0
+Price vs SMA 200,427,65,4,0,11
+Price vs SMA 50,434,67,6,0,0
+ROC 12,431,67,9,0,0
+RSI 14,434,67,6,0,0
+Rectangle,181,27,0,0,293
+Resistance bounce,286,43,5,0,156
 Rising wedge,0,0,0,0,58
-Rounding bottom,207,33,0,0,267
+Rounding bottom,208,32,0,0,267
 Rounding top,189,34,2,0,282
 Squeeze Play I (equity P/C),31,0,0,1,465
 Squeeze Play I (market P/C - open-interest substitute),0,0,0,0,372
 Squeeze Play II-B (VIX 50/100),472,0,0,16,19
 Squeeze Play II-B (stock IV),0,0,0,0,440
 Support bounce,318,48,3,0,122
+Symmetrical triangle,0,0,0,0,24
 Triple bottom,0,0,0,0,250
 Triple top,0,0,0,0,209
 Tsunami (stock P/C - open-interest substitute),0,0,0,0,380

@@ -1,0 +1,2 @@
+group,trades,win_rate,avg_return,median_return,profit_factor,target_hit,stopped,avg_days,random_avg_return,edge,edge_lo,edge_hi,edge_t,p,beat_random,months,too_few
+All pattern trades,50395,0.322,-0.08,-1.96,0.96,0.262,0.672,10.1,-0.0,-0.09,-0.22,0.04,-1.38,0.169,0.346,289,False

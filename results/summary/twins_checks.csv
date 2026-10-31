@@ -1,0 +1,22 @@
+check,label,group,judged,passed,failed,edge_passed,edge_failed,difference,diff_lo,diff_hi,diff_1st_half,diff_2nd_half,p,holm_p,bh_q,verdict
+volume_trend,Volume favours the breakout direction,Volume,43820,26785,17035,-0.08,-0.11,0.02,-0.12,0.17,0.02,0.03,0.741,1.0,0.748,no clear effect
+volume_dryup,Volume dried up during the pattern,Volume,47194,27347,19847,-0.12,-0.07,-0.05,-0.21,0.11,0.04,-0.13,0.562,1.0,0.678,no clear effect
+breakout_volume,Heavy volume on the breakout day,Volume,50233,17090,33143,-0.12,-0.08,-0.04,-0.19,0.1,-0.01,-0.08,0.576,1.0,0.678,no clear effect
+obv_confirms,On-Balance Volume confirms,Volume,50395,30356,20039,-0.13,-0.03,-0.09,-0.21,0.02,-0.13,-0.06,0.104,1.0,0.209,no clear effect
+obv_leads,On-Balance Volume broke out first,Volume,42432,15805,26627,-0.24,-0.03,-0.21,-0.36,-0.07,-0.22,-0.21,0.004,0.076,0.028,no clear effect
+last_peak_lighter,Lighter volume on the last peak or trough,Volume,12302,6866,5436,0.2,-0.04,0.24,0.0,0.48,0.26,0.21,0.049,0.635,0.122,no clear effect
+prior_trend,There was a trend to reverse,Trend,35733,5948,29785,-0.05,-0.1,0.05,-0.15,0.25,-0.05,0.14,0.61,1.0,0.678,no clear effect
+with_trend,Breaks out in the direction of the prior trend,Trend,14647,8386,6261,-0.2,0.08,-0.28,-0.5,-0.07,-0.23,-0.35,0.01,0.168,0.042,no clear effect
+major_trend,Agrees with the 200-day trend,Trend,50395,26168,24227,-0.25,0.08,-0.34,-0.55,-0.13,-0.19,-0.49,0.002,0.036,0.019,HURTS
+weekly_trend,Agrees with the weekly chart,Trend,50395,27771,22624,-0.19,0.03,-0.22,-0.42,-0.03,-0.11,-0.34,0.025,0.346,0.071,no clear effect
+market_trend,Agrees with the market (SPY),Trend,50395,31180,19215,-0.04,-0.17,0.12,-0.22,0.46,0.37,-0.13,0.487,1.0,0.678,no clear effect
+relative_strength,Relative strength agrees,Trend,50395,31343,19052,-0.2,0.09,-0.3,-0.43,-0.17,-0.36,-0.24,0.0,0.0,0.0,HURTS
+pullback_depth,Pullback not deeper than two-thirds,Retracement,14647,10575,4072,-0.16,0.13,-0.3,-0.52,-0.08,-0.15,-0.46,0.008,0.14,0.041,no clear effect
+strong_close,Strong close on the breakout day,Breakout,50325,35896,14429,-0.1,-0.07,-0.02,-0.16,0.11,-0.13,0.08,0.748,1.0,0.748,no clear effect
+not_chasing,Close not too far past the line,Breakout,50395,37887,12508,-0.1,-0.05,-0.05,-0.19,0.1,-0.07,-0.03,0.508,1.0,0.678,no clear effect
+rsi_ok,Not overbought / oversold,Breakout,50395,30859,19536,-0.02,-0.2,0.17,-0.01,0.35,0.12,0.22,0.064,0.766,0.142,no clear effect
+inside_bands,Inside the Bollinger Bands,Breakout,50395,23106,27289,-0.07,-0.11,0.04,-0.11,0.19,-0.04,0.12,0.58,1.0,0.678,no clear effect
+triangle_timing,Triangle broke out at the right time,Breakout,1459,1459,0,-0.29,,,,,,,,,,too few
+breakaway_gap,Breakaway gap on heavy volume,Gaps & reversal days,50395,11626,38769,-0.02,-0.11,0.09,-0.08,0.26,0.19,0.03,0.288,1.0,0.481,no clear effect
+key_reversal,Key reversal day at the turn,Gaps & reversal days,36134,8560,27574,-0.17,-0.07,-0.1,-0.26,0.07,-0.27,0.05,0.238,1.0,0.432,no clear effect
+room_to_run,Room to run to the target,Room to run,50395,21540,28855,-0.19,-0.02,-0.17,-0.32,-0.03,-0.17,-0.18,0.017,0.25,0.055,no clear effect

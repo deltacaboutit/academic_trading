@@ -1,0 +1,3 @@
+group,trades,win_rate,avg_return,median_return,profit_factor,target_hit,stopped,avg_days,random_avg_return,edge,edge_lo,edge_hi,edge_t,p,beat_random,months,too_few
+Bullish,28528,0.369,0.45,-1.55,1.23,0.295,0.625,11.6,0.47,-0.04,-0.22,0.14,-0.44,0.662,0.375,289,False
+Bearish,21867,0.262,-0.78,-2.55,0.68,0.22,0.733,8.1,-0.62,-0.16,-0.41,0.09,-1.24,0.218,0.308,289,False

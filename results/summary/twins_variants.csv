@@ -1,0 +1,4 @@
+variant,label,trades,changed,edge_book,edge_variant,change,change_lo,change_hi,p,too_few
+kr_exit,"Book plan, plus exit at the next open after a strong key reversal day against the trade",50293,20656,-0.09,-0.08,0.01,-0.0,0.02,0.117,False
+gap_stop,"Book plan with the stop beyond the breakaway gap (gap breakouts only, when tighter than 4%)",4960,4956,-0.07,-0.07,-0.01,-0.08,0.06,0.845,False
+pattern_stop,The pattern's own stop from the chart books instead of the 4% and line stops,50217,50214,-0.09,-0.67,-0.58,-0.82,-0.34,0.0,False
