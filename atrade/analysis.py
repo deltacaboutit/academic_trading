@@ -10,6 +10,8 @@ from . import data as D
 from .cleaning import clean
 from .gauges import gauge_signals, gauge_values
 from .gex import gex_signals
+from .confirm import attach_checks
+from .forming import forming_now, status_counts
 from .patterns import all_patterns
 from .rating import RATING_NAME, live_votes, rating_signals, run_rating
 from .sentiment import extreme_info, sentiment_signals
@@ -49,7 +51,25 @@ def apply_tuned_weights(s: dict) -> dict:
     return s
 
 
-def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=None) -> dict:
+def _market_bars(bar: str, years: int, index) -> pd.Series | None:
+    """SPY's closes in the same bar size as the stock (for the market checks)."""
+    try:
+        if bar == "hour":
+            return D.load_hourly("SPY")[0]["Close"]
+        m = D.load_market(years)
+        if m is None or bar == "day":
+            return m
+        return D.to_weekly(pd.DataFrame({"Open": m, "High": m, "Low": m, "Close": m, "Volume": 0.0}))["Close"]
+    except Exception:
+        return None
+
+
+def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=None, market=None,
+            bar: str = "day") -> dict:
+    """bar: "day" (the books' setting), "week" (daily prices combined into weeks) or "hour"
+    (hourly bars from Yahoo Finance, about two years). With weekly or hourly bars every
+    setting counted in days counts bars instead, and the options-sentiment and GEX rules,
+    which use daily options data, are switched off."""
     s = apply_tuned_weights(s)
 
     def step(msg):
@@ -57,14 +77,20 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
             progress(msg)
 
     step("Loading prices")
-    if prices is None:
+    if prices is None and bar == "hour":
+        raw, source = D.load_hourly(ticker, refresh)
+    elif prices is None:
         raw, source = D.load_prices(ticker, int(s["history_years"]), refresh)
     else:
         raw, source = prices, "Supplied data"
     step("Framework 1: cleaning the data")
     df, clean_log, quality = clean(raw, s)
+    if bar == "week":
+        wk = D.to_weekly(df)
+        df, _, _ = clean(wk, s, calendar=wk.index)     # weekly returns and the 3-sigma check; no gaps to fill
+        source += " · combined into weekly bars"
     if len(df) < 300:
-        raise ValueError(f"Only {len(df)} trading days available; at least 300 are needed.")
+        raise ValueError(f"Only {len(df)} {D.BAR_UNITS.get(bar, 'trading day')}s of prices available; at least 300 are needed.")
     o = df["Open"].to_numpy(float); c = df["Close"].to_numpy(float)
     n = len(c)
 
@@ -77,7 +103,8 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
     gv = gauge_values(c, s)
     sig_gauge = gauge_signals(c, s, gv)
     sig_zone, zone_events, zone_hist = zone_analysis(c, s)
-    sig_pat = _dedupe(all_patterns(c, s, state, df["High"].to_numpy(float), df["Low"].to_numpy(float)))
+    setups: list = []                 # complete shapes and their status; they never vote
+    sig_pat = _dedupe(all_patterns(c, s, state, df["High"].to_numpy(float), df["Low"].to_numpy(float), setups=setups))
     for sg in sig_pat:
         tr = pattern_trade(sg, o, c, s)
         sg.extra["trade"] = tr
@@ -86,12 +113,20 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         else:
             sg.live_until = max(sg.time_limit or sg.idx, sg.idx)
 
+    step("Textbook checks for the chart patterns (information only)")
+    if market is None and ticker.upper() not in ("DEMO", "SPY"):
+        market = _market_bars(bar, int(s["history_years"]), df.index)
+    elif market is None and ticker.upper() == "SPY":
+        market = df["Close"]
+    forming = forming_now(setups)
+    attach_checks(df, sig_pat + forming, market)
+
     step("Framework 5: volume")
     rv = relative_volume(df["Volume"].to_numpy(float), int(s["rv_days"]))
 
     step("Framework 6: options sentiment")
     try:
-        series = D.load_sentiment(ticker, df.index, int(s["history_years"]))
+        series = D.load_sentiment(ticker, df.index, int(s["history_years"])) if bar == "day" else {}
     except Exception:
         series = {}
     sig_sent, sent_status = sentiment_signals(series, df, s)
@@ -108,7 +143,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
     gex_lv = None
     sig_gex: list = []
     try:
-        if ticker.upper() != "DEMO":
+        if ticker.upper() != "DEMO" and bar == "day":
             gex_lv = D.load_gex(ticker, df.index)
         if gex_lv is not None:
             sig_gex = gex_signals(df, gex_lv)
@@ -121,7 +156,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         by_rule[sg.rule].append(sg)
     res = evaluate_rules(by_rule, df, s)
     from .bootstrap import verdict_table
-    boot = load_bootstrap(ticker) if ticker.upper() != "DEMO" else None
+    boot = load_bootstrap(ticker) if ticker.upper() != "DEMO" and bar == "day" else None   # the stored test used daily bars
     passes = full_pass_table(res, s, verdict_table(boot, s) if boot else None)
     allowed = None
     if s.get("only_passed_rules"):
@@ -174,8 +209,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         plan = trade_plan(lead, cur, float(c[-1]), t, s)
         if plan.get("time_limit_idx") is not None:
             k = plan["time_limit_idx"]
-            plan["time_limit_date"] = (df.index[k].date() if k < n else
-                                       (df.index[-1] + pd.tseries.offsets.BDay(k - (n - 1))).date())
+            plan["time_limit_date"] = D.bar_date(df.index, k, bar).date()
         # when did the current rating start?
         r = rating_df["rating"].to_numpy()
         j = t
@@ -191,9 +225,10 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
         "sentiment_series": series, "sentiment_status": sent_status, "extremes": extremes,
         "rating": rating_df, "rating_now": RATING_NAME[cur], "votes": votes, "plan": plan,
         "results": res, "passes": passes, "pattern_outcomes": pattern_outcomes(sig_pat, n, s),
+        "setups": setups, "forming": forming, "market_loaded": market is not None, "pattern_status": status_counts(setups, sig_pat),
         "allowed": allowed, "gex": gex_lv, "gex_signals": sig_gex,
         "lmw_detections": lmw_det, "lmw_signals": sig_lmw, "lmw_settings": lset, "lmw_info": lmw_info,
         "rating_b": rating_b, "rating_c": rating_c, "variants": variants,
         "reality_check": rc, "forecast": {"Final test": fc, "Whole history": fc_all}, "robustness": robust,
-        "bootstrap": boot, "settings_used": s,
+        "bootstrap": boot, "settings_used": s, "bar": bar,
     }

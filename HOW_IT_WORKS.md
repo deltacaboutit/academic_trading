@@ -17,13 +17,21 @@ Each time you analyse a stock, the tool runs the frameworks from your design doc
 
 ### Words used in the app
 
+The **Pattern guide** tab explains every chart pattern with a textbook example, and has a longer glossary. The Rating tab has a **summary in plain English**, and the Signals tab can **explain any pattern** it found.
+
+
 - **Signal:** a rule saying "buy" or "sell" on a particular day.
 - **Live:** a signal still counts in the rating, usually for 10 trading days, or until its pattern trade closes.
+- **Forming pattern:** a chart pattern whose shape is complete but whose price has not yet closed beyond its line. It is shown on the Chart and Signals tabs as a heads-up only: it has **no vote** in the rating until it breaks out. It can then end as Failed (price went the wrong way first), Expired (no breakout in time) or Confirmed (it broke out and became a signal), and a confirmed pattern's trade ends at Target reached, Stopped out or Time limit reached.
+- **Textbook checks:** 21 yes/no questions the classic chart books ask before trusting a breakout, such as "was volume heavy on the breakout day?" or "does the market agree?". They are shown for every chart pattern as information only and never change the rating.
 - **Hit rate:** the share of signals after which the price moved the predicted way.
 - **p-value:** the chance a result this good would appear by luck alone. Below 0.05 is the usual cut-off.
+- **Random twins and edge:** each chart-pattern trade is compared with 200 trades of the same shape started on random days near it. The **edge** is how much better the real trade did. If the patterns had real skill, the edge would be clearly above zero. The All stocks tab shows the result over every stock.
 - **Buy-and-hold:** simply owning the stock. Each rule must do better than this to be worth using.
 
 ### Things to keep in mind
+
+- The sidebar can switch to **weekly** or **hourly** bars, or analyse your own **CSV price file**. With weekly or hourly bars, every number of days in the settings counts bars instead, and the options-sentiment rules are switched off. The books only tested daily bars.
 
 - Both books found that most technical rules **did not** reliably beat buy-and-hold once costs and chance were taken into account. Support-zone bounces were the strongest finding, and even they did not beat buy-and-hold.
 - Patterns also appear in random prices. Try the `DEMO` ticker: its prices are simulated, yet the tool still finds patterns and "signals" in them.

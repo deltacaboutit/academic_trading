@@ -83,6 +83,120 @@ def load_vix(years: int) -> pd.Series | None:
         return None
 
 
+# ------------------------------------------- other bar sizes and CSV files ---
+# Added from PatternFinder 2.5 (pattern_core/data.py and streamlit_app.py).
+
+BAR_UNITS = {"day": "trading day", "week": "week", "hour": "hour"}
+HOURLY_DAYS = 729       # Yahoo Finance keeps hourly prices for about the last two years only
+
+
+def to_weekly(df: pd.DataFrame) -> pd.DataFrame:
+    """Daily bars combined into weekly bars ending on Friday: the week's first open, highest
+    high, lowest low, last close and total volume. A week is dated by its last trading day."""
+    d = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+    wk = d.index.to_period("W-FRI")
+    g = d.groupby(wk)
+    out = pd.DataFrame({"Open": g["Open"].first(), "High": g["High"].max(), "Low": g["Low"].min(),
+                        "Close": g["Close"].last(), "Volume": g["Volume"].sum()})
+    out.index = pd.DatetimeIndex(d.index.to_series().groupby(wk).max().to_numpy())
+    return out.dropna(subset=["Close"])
+
+
+def load_hourly(ticker: str, refresh: bool = False) -> tuple[pd.DataFrame, str]:
+    """Hourly bars for about the last two years from Yahoo Finance (a saved copy is reused on the same day)."""
+    _ensure_dirs()
+    ticker = ticker.upper().strip()
+    if ticker == "DEMO":
+        raise ValueError("Hourly bars are not available for the demo data. Pick Daily or Weekly.")
+    path = CACHE_DIR / f"{ticker.replace('^', '_')}_1h.csv"
+    if path.exists() and not refresh and dt.date.fromtimestamp(path.stat().st_mtime) == dt.date.today():
+        df = pd.read_csv(path, index_col=0, parse_dates=True)
+        return df, f"Yahoo Finance hourly bars (saved copy from today, {len(df)} hours)"
+    import yfinance as yf
+    raw = yf.Ticker(ticker).history(period=f"{HOURLY_DAYS}d", interval="1h", auto_adjust=True)
+    if raw is None or raw.empty:
+        raise ValueError(f"Yahoo Finance returned no hourly prices for {ticker}.")
+    raw.index = pd.DatetimeIndex(raw.index).tz_convert("America/New_York").tz_localize(None)
+    df = raw[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+    df.to_csv(path)
+    return df, f"Yahoo Finance hourly bars (downloaded {dt.datetime.now():%Y-%m-%d %H:%M}, {len(df)} hours)"
+
+
+def parse_price_csv(content: bytes) -> pd.DataFrame:
+    """Read a price file you saved yourself (PatternFinder 2.5's load_csv).
+
+    It needs a date column (named Date, Datetime, Time or Timestamp) and the columns
+    Open, High, Low, Close and, if available, Volume. Upper or lower case does not matter.
+    """
+    import io
+    try:
+        raw = pd.read_csv(io.BytesIO(content))
+    except Exception as e:
+        raise ValueError(f"Could not read the file: {e}") from e
+    cols = ["Open", "High", "Low", "Close", "Volume"]
+    rename = {}
+    for col in raw.columns:
+        key = str(col).strip().lower().replace(" ", "").replace("_", "")
+        if "." in key:                                  # e.g. "AAPL.Close" -> "close"
+            key = key.split(".")[-1]
+        if key in ("date", "datetime", "time", "timestamp"):
+            rename[col] = "Date"
+        else:
+            for want in cols:
+                if key == want.lower():
+                    rename[col] = want
+    raw = raw.rename(columns=rename)
+    if "Date" not in raw.columns:
+        raise ValueError("The CSV file needs a column called 'Date'.")
+    missing = [c for c in cols[:4] if c not in raw.columns]
+    if missing:
+        raise ValueError("The CSV file is missing these columns: " + ", ".join(missing))
+    if "Volume" not in raw.columns:
+        raw["Volume"] = 0.0
+    dates = raw["Date"].astype(str)
+    if dates.str.contains(r"[+-]\d\d:\d\d$").any():   # dates with a time-zone offset: keep the local time
+        raw["Date"] = pd.to_datetime(dates.str.slice(0, 19), errors="coerce")
+    else:
+        raw["Date"] = pd.to_datetime(dates, errors="coerce")
+    df = raw.dropna(subset=["Date"]).set_index("Date")[cols].apply(pd.to_numeric, errors="coerce")
+    df = df.dropna(subset=["Open", "High", "Low", "Close"])
+    df["Volume"] = df["Volume"].fillna(0.0)
+    df = df[~df.index.duplicated(keep="last")].sort_index()
+    if df.empty:
+        raise ValueError("The CSV file has no usable rows.")
+    return df
+
+
+def bar_date(index, i: int, bar: str = "day"):
+    """The date of bar number i. Bars after the last one are counted forward in trading days,
+    weeks (Fridays) or trading hours (about 7 a day), to match the bar size."""
+    idx = pd.DatetimeIndex(index)
+    if 0 <= i < len(idx):
+        return idx[i]
+    k = i - (len(idx) - 1)
+    if bar == "week":                                  # the Friday of the last bar's week, then k weeks on
+        friday = idx[-1].normalize() + pd.Timedelta(days=(4 - idx[-1].weekday()) % 7)
+        return friday + pd.Timedelta(weeks=k)
+    if bar == "hour":
+        return (idx[-1] + pd.offsets.BDay(-(-k // 7))).normalize()
+    return idx[-1] + pd.offsets.BDay(k)
+
+
+def is_intraday(index) -> bool:
+    """True if the dates include times of day (for example hourly bars)."""
+    idx = pd.DatetimeIndex(index)
+    return bool(len(idx) and (idx != idx.normalize()).any())
+
+
+def load_market(years: int) -> pd.Series | None:
+    """SPY's closing prices, for the market and relative-strength checks (confirm.py)."""
+    try:
+        df, _ = load_prices("SPY", years)
+        return df["Close"]
+    except Exception:
+        return None
+
+
 # --------------------------------------------------- options snapshots ------
 
 def snapshot_options(ticker: str) -> dict:

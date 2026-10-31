@@ -5,6 +5,7 @@ Framework 7 weight tuning). Uses the price history in price_data/.
     python -m atrade.research stocks --shard 0 --of 20 --B 500 # stage 2: per-stock work (run every shard)
     python -m atrade.research combine                         # stage 3: pooled tests + weight tuning
     python -m atrade.research all --tickers AAPL MSFT SPY --B 100   # everything, one machine
+    python -m atrade.research twins                           # only re-pool the random-twin test (needs work/)
 
 Stage 2 writes per-stock files into work/ (scores and LMW returns are only needed by
 stage 3) and results/ (bootstrap and random-pattern results, kept in the repo).
@@ -134,6 +135,8 @@ def stock_job(ticker: str, B: int, s: dict = DEFAULTS) -> str:
     pd.DataFrame(rows).to_parquet(work / f"{ticker}_lmw.parquet")
     r["variants"].assign(ticker=ticker).to_csv(work / f"{ticker}_variants.csv", index=False)
     pd.DataFrame([{**r["reality_check"], "ticker": ticker}]).to_csv(work / f"{ticker}_rc.csv", index=False)
+    from .twins import twin_trades
+    twin_trades(ticker, r["df"], r["patterns"], s).to_csv(work / f"{ticker}_twins.csv", index=False)
     if B > 0:
         boot = BS.run(c, s, B=B)
         save_bootstrap(ticker, boot)
@@ -338,15 +341,38 @@ def combine(s: dict = DEFAULTS, log=print):
                                         real_avg_return=("real_avg_return", "mean"),
                                         random_avg_return=("random_avg_return", "mean")).reset_index()
         save_table(agg, "summary/random_patterns_all_stocks.csv")
+    twin_summary(work, log)
     tune_weights(s, log)
     save_json({"stocks": int(rules["ticker"].nunique()), "created": pd.Timestamp.now().isoformat(timespec="minutes"),
                "exchange_split": bool(groups)}, "summary/run_info.json")
     log(f"Combined results for {rules['ticker'].nunique()} stocks written to results/summary/.")
 
 
+def twin_summary(work: Path = WORK / "stocks", log=print) -> dict:
+    """The random-twin test pooled over every stock (twins.py and edge_stats.py, from PatternFinder 2.5).
+    Writes results/summary/twin_trades.csv.gz (one row per pattern trade) and the twins_*.csv tables."""
+    from .edge_stats import full_report
+    files = sorted(work.glob("*_twins.csv"))
+    parts = [pd.read_csv(f) for f in files if f.stat().st_size > 1]
+    parts = [p for p in parts if len(p)]
+    if not parts:
+        return {}
+    T = pd.concat(parts, ignore_index=True)
+    num = T.select_dtypes("float").columns
+    T[num] = T[num].round(4)
+    save_table(T, "summary/twin_trades.csv.gz")         # one row per trade; compressed, as it is large
+    rep = full_report(T)
+    for k, tb in rep.items():
+        save_table(tb, f"summary/twins_{k}.csv")
+    o = rep["overall"].iloc[0]
+    log(f"Random-twin test: {int(o['trades'])} pattern trades, edge {o['edge']:+.2f}% per trade "
+        f"(95% range {o['edge_lo']:+.2f}% to {o['edge_hi']:+.2f}%).")
+    return rep
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("stage", choices=["calibrate", "stocks", "combine", "all"])
+    ap.add_argument("stage", choices=["calibrate", "stocks", "combine", "all", "twins"])
     ap.add_argument("--tickers", nargs="*")
     ap.add_argument("--shard", type=int, default=0)
     ap.add_argument("--of", type=int, default=1)
@@ -364,6 +390,8 @@ def main(argv=None):
         run_stocks(mine, a.B, a.workers)
     if a.stage in ("combine", "all"):
         combine()
+    if a.stage == "twins":
+        twin_summary()
 
 
 if __name__ == "__main__":

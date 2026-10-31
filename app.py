@@ -47,25 +47,62 @@ if "settings" not in st.session_state:
 S = st.session_state.settings
 
 
+BARS = {"Daily": "day", "Weekly": "week", "Hourly": "hour"}
+
+
 @st.cache_data(show_spinner=False, ttl=6 * 3600)
-def cached_analyze(ticker: str, settings_json: str, day: str, refresh_token: int):
-    return analyze(ticker, json.loads(settings_json), refresh=refresh_token > 0)
+def cached_analyze(ticker: str, settings_json: str, day: str, refresh_token: int, bar: str = "day"):
+    return analyze(ticker, json.loads(settings_json), refresh=refresh_token > 0, bar=bar)
 
 
-def run(ticker, refresh=False):
+@st.cache_data(show_spinner=False, ttl=6 * 3600, max_entries=5)
+def cached_analyze_csv(content: bytes, name: str, settings_json: str, bar: str):
+    from atrade.data import parse_price_csv
+    out = analyze(name, json.loads(settings_json), prices=parse_price_csv(content), bar=bar)
+    out["source"] = f"Your file {name}.csv"
+    return out
+
+
+def run(ticker, refresh=False, bar="day", upload=None):
     tok = int(dt.datetime.now().timestamp()) if refresh else 0
     with st.spinner(f"Analysing {ticker} ..."):
-        return cached_analyze(ticker, json.dumps(S, sort_keys=True), dt.date.today().isoformat(), tok)
+        if upload is not None:
+            return cached_analyze_csv(upload[1], upload[0], json.dumps(S, sort_keys=True), bar)
+        return cached_analyze(ticker, json.dumps(S, sort_keys=True), dt.date.today().isoformat(), tok, bar)
 
 
 def date_of(res, i):
     """Date of day number i; days after the last close are counted forward in trading days."""
-    idx = res["df"].index
     if i is None:
         return None
-    if 0 <= i < len(idx):
-        return idx[i].date()
-    return (idx[-1] + pd.tseries.offsets.BDay(i - (len(idx) - 1))).date()
+    from atrade.data import bar_date
+    d = bar_date(res["df"].index, i, res.get("bar", "day"))
+    return d if res.get("bar") == "hour" and i < len(res["df"]) else d.date()   # hourly bars keep their time of day
+
+
+def twin_verdict(o) -> str:
+    """One plain-English sentence about the edge over random twins (a row of edge_stats)."""
+    if not o or not o.get("trades"):
+        return "No pattern trades to test."
+    lo, hi = o.get("edge_lo"), o.get("edge_hi")
+    msg = (f"**{int(o['trades'])} pattern trades.** Their average return was {o['avg_return']:+.2f}% per trade, against "
+           f"{o['random_avg_return']:+.2f}% for their random twins, so the **edge** the patterns added was "
+           f"**{o['edge']:+.2f}%** per trade")
+    if lo is None or hi is None or (isinstance(lo, float) and np.isnan(lo)):
+        return msg + "."
+    msg += f" (95% range {lo:+.2f}% to {hi:+.2f}%). "
+    if lo > 0:
+        return msg + "The whole range is above zero: the patterns beat trades of the same shape on random days."
+    if hi < 0:
+        return msg + "The whole range is below zero: the patterns did worse than trades of the same shape on random days."
+    return msg + "The range includes zero, so there is **no reliable edge**: the result could easily be luck."
+
+
+TWIN_NOTE = ("Each real pattern trade is compared with 200 pretend trades on the same stock, in the same direction, with "
+             "the same target and stop distances and time limit, started on random days within about a year. "
+             "Edge = real return minus the twins' average. Trades are filled realistically (the day's high and low, "
+             "gaps exit at the open, the stop counts first if both are hit on one day). The 95% range treats trades "
+             "from the same month as one group, because they share the same market moves.")
 
 
 def pct(x, digits=1):
@@ -83,20 +120,32 @@ with st.sidebar:
     go_btn = c1.button("Analyse", type="primary", width="stretch")
     refresh = c2.button("Re-download", width="stretch",
                         help="Ignore today's saved copy and download fresh prices.")
+    bar_name = st.radio("Bar size", list(BARS), horizontal=True,
+                        help="Daily is the books' setting. Weekly combines each week's days into one bar. Hourly uses "
+                             "Yahoo Finance's hourly prices (about the last two years). With weekly or hourly bars every "
+                             "number of days in the settings counts bars instead.")
+    bar = BARS[bar_name]
+    up = st.file_uploader("Or analyse your own CSV price file", type=["csv"],
+                          help="Columns: Date, Open, High, Low, Close and (if you have it) Volume. Daily or hourly rows. "
+                               "The file's name is used as the ticker, for example AAPL.csv, so the tool can add that "
+                               "stock's options data.")
+    upload = (Path(up.name).stem.upper(), up.getvalue()) if up is not None else None
     st.caption("Prices: Yahoo Finance, adjusted for splits and dividends. "
                "Ratings use closing prices, so check after 4:00 pm New York time.")
     if ON_CLOUD:
         st.info("**Online version.** Changes you make to settings or the watch list last until you close "
                 "this page. The app picks up new data a few minutes after GitHub is updated.")
 
-if go_btn or refresh or "res" not in st.session_state or st.session_state.get("ticker") != ticker:
-    if ticker:
+want = (upload[0] if upload else ticker, bar, bool(upload))
+if go_btn or refresh or "res" not in st.session_state or st.session_state.get("want") != want:
+    if ticker or upload:
         try:
-            st.session_state.res = run(ticker, refresh=refresh)
+            st.session_state.res = run(want[0], refresh=refresh, bar=bar, upload=upload)
             st.session_state.ticker = ticker
+            st.session_state.want = want
             st.session_state.err = None
         except Exception as e:
-            st.session_state.err = f"Could not analyse {ticker}: {e}"
+            st.session_state.err = f"Could not analyse {want[0]}: {e}"
             st.session_state.res = None
 
 res = st.session_state.get("res")
@@ -117,12 +166,18 @@ h1.caption(f"Last close {df['Close'].iloc[-1]:,.2f} on {last_day:%a %d %b %Y} ·
 ny = dt.datetime.now(ZoneInfo("America/New_York"))
 if last_day == ny.date() and ny.hour < 16:
     h2.warning("Today's prices are not final until the market closes at 4:00 pm New York time.")
+if res.get("bar", "day") != "day":
+    unit = {"week": "week", "hour": "hour"}[res["bar"]]
+    st.info(f"**{unit.capitalize()}ly bars.** Every number of days in this analysis (turning-point windows, holding "
+            f"periods, time limits, 'live' days) counts {unit}s instead. The options-sentiment and GEX rules use daily "
+            "options data, so they are switched off, and the stored random-price test is not used. The books tested "
+            "daily bars only, so treat these results as exploratory.")
 if not res["quality"]["passed"]:
     h2.error(f"Data check failed: {res['quality']['worst_year_missing']:.1%} of trading days were missing in "
              f"{res['quality']['worst_year']} (limit 5%). Treat this rating with extra caution.")
 
 tabs = st.tabs(["Rating", "Chart", "Signals", "Back-test", "Validation", "LMW", "Similarity", "Watch list",
-                "All stocks", "Options data", "Data quality", "Settings", "How it works"])
+                "All stocks", "Options data", "Data quality", "Settings", "How it works", "Pattern guide"])
 
 # =============================================================== RATING ====
 with tabs[0]:
@@ -181,6 +236,10 @@ with tabs[0]:
               chk(max(G) <= S["veto_level"], f"no group above +{S['veto_level']:.2f}")]
         st.markdown("**Buy needs:** " + " &nbsp; ".join(b), unsafe_allow_html=True)
         st.markdown("**Sell needs:** " + " &nbsp; ".join(sl), unsafe_allow_html=True)
+
+    with st.expander("Summary in plain English"):
+        from atrade.report import summary_text
+        st.markdown(summary_text(res))
 
     plan = res["plan"]
     if plan:
@@ -337,6 +396,25 @@ with tabs[1]:
                 fig.add_trace(go.Scatter(x=[df.index[sg.idx], df.index[tl]], y=[sg.target, sg.target], mode="lines",
                                          line=dict(color=col, dash="dash", width=1), showlegend=False,
                                          hovertext="Price target until the time limit"), 1, 1)
+        # patterns still forming: dotted, with the line that would have to break drawn up to today
+        for u in res.get("forming", []):
+            if u.points[-1][0] < a:
+                continue
+            col = BUY_DARK if u.direction > 0 else SELL_DARK if u.direction < 0 else GREY
+            pts = [p for p in u.points if p[2] != "prior"]
+            fig.add_trace(go.Scatter(x=[df.index[p[0]] for p in pts], y=[p[1] for p in pts], mode="lines+markers",
+                                     line=dict(color=col, width=2, dash="dot"), marker=dict(size=6, symbol="circle-open"),
+                                     name=f"{u.rule} (forming)", hovertext=f"{u.rule}: forming, no breakout yet",
+                                     showlegend=False), 1, 1)
+            t0 = pts[-1][0]
+            for d, ln in u.breaks:
+                fig.add_trace(go.Scatter(x=[df.index[t0], df.index[-1]], y=[ln[0] * t0 + ln[1], ln[0] * (n - 1) + ln[1]],
+                                         mode="lines", line=dict(color=BUY_DARK if d > 0 else SELL_DARK, width=1.5, dash="dot"),
+                                         showlegend=False, hovertext=f"{u.rule}: a close {'above' if d > 0 else 'below'} "
+                                                                     f"this line would be a breakout"), 1, 1)
+            fig.add_annotation(x=df.index[t0], y=pts[-1][1], text=f"{u.rule} (forming)", showarrow=True, arrowcolor=col,
+                               arrowwidth=1, ax=0, ay=34 if u.direction > 0 else -34, font=dict(size=11, color=col),
+                               bgcolor="rgba(255,255,255,0.9)", bordercolor=col, borderwidth=1, borderpad=3, row=1, col=1)
     # zone bounces and (optionally) indicator signals
     def ind_shown(sg):
         if ind_pick == "None" or sg.kind not in IND_KINDS or ind_pick not in ("All indicators", sg.rule):
@@ -370,11 +448,61 @@ with tabs[1]:
     st.caption("Volume bars: green = at least 1.5× the 50-day average (signal confirmed), blue = 1.0–1.5× (half weight), "
                "grey = below average (signal not confirmed). Shaded bands are today's support/resistance zones. "
                "Stars mark chart-pattern breaks and open circles mark turning points; the dashed line is the price target until the time limit. "
+               "Dotted shapes are patterns still forming: a close beyond the dotted line would be a breakout. "
                "Triangles are buy and sell signals; 'Strongest only' keeps the indicator signals that came with "
                "green (heavy) volume.")
 
 # ============================================================== SIGNALS ====
 with tabs[2]:
+    from atrade.report import checks_short
+    st.subheader("Chart patterns forming now")
+    fm = res.get("forming", [])
+    if fm:
+        DIR = {1: "Up", -1: "Down", 0: "Either way"}
+        rows = []
+        for u in fm:
+            lines = {d: ln[0] * (n - 1) + ln[1] for d, ln in u.breaks}
+            ups, dns = lines.get(1), lines.get(-1)
+            rows.append({"Pattern": u.rule, "Expected break": DIR[u.direction],
+                         "Shape confirmed": date_of(res, u.known),
+                         "Breaks up above": round(ups, 2) if ups is not None else None,
+                         "Breaks down below": round(dns, 2) if dns is not None else None,
+                         "Target if up": round(u.target_if(1, n - 1), 2) if ups is not None else None,
+                         "Target if down": round(u.target_if(-1, n - 1), 2) if dns is not None else None,
+                         "Must break by": date_of(res, u.deadline),
+                         "Checks passed": checks_short(u)})
+        st.dataframe(pd.DataFrame(rows), hide_index=True)
+    else:
+        st.write("No chart pattern is forming today.")
+    st.caption("A forming pattern has a complete shape but no breakout yet. It does **not** vote in the rating and is "
+               "not back-tested: it only becomes a signal if a close goes beyond its line by the 'must break by' date. "
+               "Line levels and targets are for a break today. 'Checks passed' counts the textbook confirmation checks "
+               "that could be judged so far (pick the pattern below to see them); they are information only.")
+    with st.expander("How did this stock's chart patterns turn out?"):
+        ps = res.get("pattern_status")
+        if ps is not None and not ps.empty:
+            st.dataframe(ps.rename(columns={"rule": "Pattern", "shapes": "Shapes found"}), hide_index=True)
+        st.caption("Each complete shape is counted once. **Broke out**: price closed beyond the line in time, which made "
+                   "a signal. **Failed**: before breaking out, price closed across the pattern's other line or beyond its "
+                   "extreme, or broke out too early. **Expired**: no breakout before the deadline. The last four columns "
+                   "show how the breakout trades ended (Confirmed = still open); two shapes that break out on the same day "
+                   "make one trade. Rounding tops and bottoms and islands are only defined on the day they complete, "
+                   "so they appear only in those last columns.")
+
+    st.subheader("Explain a pattern")
+    from atrade.report import describe
+    pick = [(f"{u.rule} — forming", u) for u in fm]
+    pick += [(f"{sg.rule} — {'buy' if sg.direction > 0 else 'sell'} signal on {date_of(res, sg.idx):%d %b %Y}", sg)
+             for sg in sorted(res["patterns"], key=lambda x: -x.idx)]
+    if pick:
+        k = st.selectbox("Pattern", range(len(pick)), format_func=lambda i: pick[i][0],
+                         help="Patterns forming now first, then every pattern signal, newest first.")
+        with st.container(border=True):
+            st.markdown(pick[k][1] and describe(pick[k][1], res))
+    else:
+        st.write("No chart patterns were found in this stock's history.")
+
+    st.subheader("Signals")
     st.write("Every signal the rules produced, newest first. Signals are dated on the day they became known; "
              "a trade would start at the next day's open.")
     f1, f2 = st.columns(2)
@@ -390,7 +518,8 @@ with tabs[2]:
                      "Volume ×avg": round(float(res["rv"][sg.idx]), 2) if not np.isnan(res["rv"][sg.idx]) else None,
                      "Target": round(sg.target, 2) if sg.target is not None else None,
                      "Outcome": tr.get("outcome", ""), "Trade return": pct(tr.get("ret")) if "ret" in tr else "",
-                     "Trend before": sg.extra.get("trend_before", ""), "Reason": sg.text})
+                     "Trend before": sg.extra.get("trend_before", ""),
+                     "Textbook checks": checks_short(sg) if sg.kind == "pattern" else "", "Reason": sg.text})
     sdf = pd.DataFrame(rows)
     if not sdf.empty:
         sdf = sdf.sort_values("Date", ascending=False)
@@ -453,7 +582,30 @@ with tabs[3]:
             st.caption("In the book's tests (Tables 5.4–5.5) most pattern trades were stopped out, and similar shares "
                        "appeared in random price series.")
 
-# ============================================================ VALIDATION ====
+# ---- random-twin test for this stock (inside the Back-test tab) ----
+with tabs[3]:
+    st.subheader("Random-twin test for this stock's chart patterns")
+    st.caption(TWIN_NOTE + " One stock has few trades, so the all-stock result (All stocks tab) is the one to trust.")
+    key = f"twins_{res['ticker']}_{len(df)}"
+    if st.button("Run the random-twin test for this stock", help="Takes a few seconds."):
+        from atrade.edge_stats import full_report
+        from atrade.twins import twin_trades
+        with st.spinner("Simulating 200 random twins for every pattern trade ..."):
+            st.session_state[key] = full_report(twin_trades(res["ticker"], df, res["patterns"], S))
+    rep_ = st.session_state.get(key)
+    if rep_ is not None:
+        if not rep_:
+            st.write("This stock has no pattern trades to test.")
+        else:
+            st.markdown(twin_verdict(rep_["overall"].iloc[0].to_dict()))
+            st.write("**Ways of managing the same trades** (change = the variant's edge minus the book plan's edge, "
+                     "on the same random days):")
+            st.dataframe(rep_["variants"], hide_index=True)
+            with st.expander("By pattern"):
+                st.dataframe(rep_["by_pattern"], hide_index=True)
+            with st.expander("Textbook checks: edge of trades that passed minus trades that failed"):
+                st.dataframe(rep_["checks"], hide_index=True)
+
 with tabs[4]:
     st.write("Framework 9's pass rule: in the **final test** period a rule must beat buy-and-hold after costs "
              "(steps 2 and 7) **and** beat the artificial price histories of the random-price test (step 3).")
@@ -666,6 +818,32 @@ with tabs[8]:
             st.caption("Turn them on in Settings → 'Use tuned weights'. The final-test row is reported once, as is.")
         else:
             st.write("No weights qualified.")
+        st.subheader("Random-twin test for the chart patterns (from PatternFinder 2.5)")
+        ov = load_table("summary/twins_overall.csv")
+        if ov is not None and len(ov):
+            st.markdown(twin_verdict(ov.iloc[0].to_dict()))
+            st.caption(TWIN_NOTE)
+            for title, name, note in (
+                    ("By pattern (Holm and Benjamini–Hochberg adjust for testing many patterns)", "summary/twins_by_pattern.csv",
+                     "holm_p / bh_q below 0.05 would mean a pattern's edge is unlikely to be luck even after testing all of "
+                     "them. 'too_few' marks patterns with fewer than 20 trades."),
+                    ("Textbook checks: do trades that pass a check beat those that fail it?", "summary/twins_checks.csv",
+                     "A check HELPS only if holm_p < 0.05, the difference is above 0 in both halves of the period, and at "
+                     "least 20 trades passed and 20 failed. Only such checks may be marked 'helped in the back-test'."),
+                    ("Ways of managing the same trades", "summary/twins_variants.csv",
+                     "change = the variant's edge minus the book plan's edge, trade by trade, on the same random days. "
+                     "pattern_stop is the chart books' own stop for each pattern; the book plan stays the default."),
+                    ("First and second half of the period", "summary/twins_by_half.csv", "A real effect should show up in both halves."),
+                    ("Bullish and bearish patterns", "summary/twins_by_bias.csv", ""),
+                    ("How the trades ended", "summary/twins_by_exit.csv", "line = 2 closes back across the broken line.")):
+                tb = load_table(name)
+                if tb is not None and len(tb):
+                    with st.expander(title):
+                        st.dataframe(tb, hide_index=True)
+                        if note:
+                            st.caption(note)
+        else:
+            st.write("Not in this research run yet. It is added automatically the next time the research run is started.")
         for title, name, note in (
                 ("Does each rule beat buy-and-hold across stocks? (step 5)", "summary/bernoulli_by_rule.csv",
                  "Each stock is one coin flip. p < 0.05: more stocks beat buy-and-hold than chance would give."),
@@ -898,3 +1076,66 @@ with tabs[11]:
 # ========================================================= HOW IT WORKS ====
 with tabs[12]:
     st.markdown(Path(__file__).with_name("HOW_IT_WORKS.md").read_text(encoding="utf-8"))
+
+# ======================================================== PATTERN GUIDE ====
+with tabs[13]:
+    from atrade.examples import example_chart
+    from atrade.pattern_info import DISCLAIMER, GLOSSARY, PATTERN_INFO, STATUS_HELP, STOP_RULE
+    st.write("Every chart pattern the tool looks for, with a made-up textbook example. The example is drawn from "
+             "what the tool's own rules found in it, so it shows the same lines and targets the tool uses.")
+    cats = ["Reversal", "Continuation", "Either way"]
+    g1, g2 = st.columns([1, 2])
+    cat = g1.radio("Kind of pattern", cats, help="Reversal: the trend may turn. Continuation: the trend may carry on. "
+                                                 "Either way: it can break in both directions.")
+    names = [k for k, v in PATTERN_INFO.items() if v["category"] == cat]
+    name = g2.selectbox("Pattern", names)
+    info = PATTERN_INFO[name]
+    left, right = st.columns([3, 2])
+    with left:
+        gdf, gsg = example_chart(name)
+        gfig = go.Figure()
+        gx = list(range(len(gdf)))
+        if name.startswith("Island"):
+            for i in gx:
+                gfig.add_trace(go.Scatter(x=[i, i], y=[gdf["Low"].iloc[i], gdf["High"].iloc[i]], mode="lines",
+                                          line=dict(color="#24292f", width=3), showlegend=False, hoverinfo="skip"))
+        else:
+            gfig.add_trace(go.Scatter(x=gx, y=gdf["Close"], mode="lines", line=dict(color="#24292f", width=1.6),
+                                      name="Close", showlegend=False))
+        if gsg is not None:
+            col = BUY_DARK if gsg.direction > 0 else SELL_DARK
+            pts = [p for p in gsg.points if p[2] != "prior"]
+            gfig.add_trace(go.Scatter(x=[p[0] for p in pts], y=[p[1] for p in pts], mode="lines+markers",
+                                      line=dict(color=col, width=2.5), marker=dict(size=7), showlegend=False,
+                                      text=[p[2] for p in pts], hoverinfo="text"))
+            if gsg.line is not None:
+                a0 = pts[0][0]
+                gfig.add_trace(go.Scatter(x=[a0, gsg.idx], y=[gsg.line_value(a0), gsg.line_value(gsg.idx)], mode="lines",
+                                          line=dict(color=GREY, width=1.2, dash="dot"), showlegend=False,
+                                          hovertext="The line the price breaks", hoverinfo="text"))
+            gfig.add_trace(go.Scatter(x=[gsg.idx], y=[gdf["Close"].iloc[gsg.idx]], mode="markers",
+                                      marker=dict(symbol="star", size=16, color=col), showlegend=False,
+                                      hovertext="Breakout: the signal day", hoverinfo="text"))
+            tl = min(gsg.time_limit, gsg.idx + 20)        # a short stretch, so the target shows on the picture
+            gfig.add_trace(go.Scatter(x=[gsg.idx, tl], y=[gsg.target, gsg.target], mode="lines",
+                                      line=dict(color=col, dash="dash", width=1), showlegend=False,
+                                      hovertext="Price target", hoverinfo="text"))
+            gfig.add_annotation(x=tl, y=gsg.target, text="target", showarrow=False, yshift=10, font=dict(color=col))
+        gfig.update_layout(height=340, margin=dict(l=10, r=40, t=10, b=10), plot_bgcolor="white",
+                           xaxis=dict(title="Day", gridcolor="#eaeef2"), yaxis=dict(title="Price", gridcolor="#eaeef2"))
+        st.plotly_chart(gfig, key="guide_chart")
+        st.caption("A clean, made-up example. The star is the breakout day, the dotted grey line is the line that "
+                   "breaks and the dashed line is the price target. Real charts are much messier.")
+    with right:
+        st.markdown(f"**{info['category']}** pattern · usual direction: **{info['bias']}**")
+        st.markdown(f"**What it looks like.** {info['looks']}")
+        st.markdown(f"**What it may mean.** {info['means']}")
+        st.markdown(f"**The tool's rule.** {info['rule']}")
+        st.markdown(f"**Target.** {info['target']}")
+        st.markdown(f"**Stop.** {STOP_RULE} The chart books would put a stop here instead: {info['pattern_stop']}")
+    st.subheader("What the statuses mean")
+    st.table(pd.DataFrame([{"Status": k, "Meaning": v} for k, v in STATUS_HELP.items()]).set_index("Status"))
+    st.subheader("Words used")
+    for term, text in GLOSSARY:
+        st.markdown(f"**{term}.** {text}")
+    st.info(DISCLAIMER)

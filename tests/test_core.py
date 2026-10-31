@@ -130,18 +130,28 @@ def test_no_look_ahead(cut):
     df, _, _ = clean(raw, S)
     sent = demo_sentiment(df.index)
 
+    def as_of_cut(u):
+        # a setup's status as it looked on day `cut`: anything decided later was still forming then
+        done = u.resolved is not None and u.resolved <= cut
+        return (u.rule, u.known, tuple((a, round(b, 9)) for a, b, _ in u.points),
+                u.status if done else "Forming", u.resolved if done else None, u.broke_dir if done else 0)
+
     def run(d):
         c = d["Close"].to_numpy(float)
         st = trend_state(c, S)
+        setups = []
         out = trend_signals(d, S) + gauge_signals(c, S) + zone_analysis(c, S)[0]
-        out += all_patterns(c, S, st, d["High"].to_numpy(float), d["Low"].to_numpy(float))
+        out += all_patterns(c, S, st, d["High"].to_numpy(float), d["Low"].to_numpy(float), setups=setups)
         out += sentiment_signals({k: v[:len(d)] for k, v in sent.items()}, d, S)[0]
-        return st, sorted((x.rule, x.idx, x.direction) for x in out if x.idx <= cut)
+        return (st, sorted((x.rule, x.idx, x.direction) for x in out if x.idx <= cut),
+                sorted(as_of_cut(u) for u in setups if u.known <= cut))
 
-    st_full, full = run(df)
-    st_cut, part = run(df.iloc[:cut + 1])
+    st_full, full, set_full = run(df)
+    st_cut, part, set_cut = run(df.iloc[:cut + 1])
     assert full == part
     assert np.array_equal(st_full[:cut + 1], st_cut)
+    # forming patterns: what was known on day `cut` is the same with or without the later data
+    assert set_full == set_cut and set_cut
 
 
 def test_bull_flag_detected():
@@ -239,3 +249,63 @@ def test_download_prices_layout_and_retry_logic(tmp_path):
     # --missing-only retries only the failed ticker
     DP.main(["--tickers", "AAPL", "BAD", "--missing-only"], fetcher=fake, out=tmp_path)
     assert calls["BAD"] == 2
+
+
+# ---------------------------------------------------------- forming patterns --
+
+def _setups_and_signals(c, high=None, low=None):
+    setups = []
+    sigs = all_patterns(c, S, np.zeros(len(c)), high, low, setups=setups)
+    return setups, sigs
+
+
+def test_setups_match_signals_and_never_change_them():
+    """A setup that "broke out" is exactly a pattern Signal, and asking for
+    setups never changes the signals (so the rating and back-test are untouched)."""
+    from atrade.cleaning import clean
+    df, _, _ = clean(demo_prices(), S)
+    walks = [100 * np.exp(np.cumsum(np.random.default_rng(k).normal(0, 0.015, 2500))) for k in range(3)]
+    series = [df["Close"].to_numpy(float)] + walks
+    for c in series:
+        setups, sigs = _setups_and_signals(c)
+        plain = all_patterns(c, S, np.zeros(len(c)))
+        assert [(x.rule, x.idx, x.direction, x.target) for x in sigs] == \
+               [(x.rule, x.idx, x.direction, x.target) for x in plain]
+        assert setups and all(isinstance(u.status, str) for u in setups)
+        sk = {(x.rule, x.idx, x.direction) for x in sigs if not x.rule.startswith(("Rounding", "Island"))}
+        bk = {(u.rule, u.resolved, u.broke_dir) for u in setups if u.status == "Broke out"}
+        assert bk <= sk
+        # a signal without a "broke out" setup is one whose setup failed by passing its extreme first
+        for rule, idx, d in sk - bk:
+            assert any(u.rule == rule and u.status == "Failed" and "extreme" in u.reason and u.resolved < idx
+                       for u in setups)
+        for u in setups:
+            assert u.known <= (u.resolved if u.resolved is not None else len(c) - 1)
+            assert u.status != "Forming" or u.deadline >= len(c) - 1
+
+
+def test_double_top_forming_failed_expired_and_broke_out():
+    from atrade.forming import forming_now
+    shape = [(0, 80), (30, 100), (45, 85), (60, 100.5), (80, 90)]   # two peaks, trough 85, no break yet
+    setups, _ = _setups_and_signals(_path(shape))
+    now = [u for u in forming_now(setups) if u.rule == "Double top"]
+    assert len(now) == 1
+    u = now[0]
+    assert u.direction == -1 and u.known == 60 + S["w_double"] and u.deadline == 60 + 30 - 1
+    assert u.target_if(-1, 80) == pytest.approx(85 - (100.5 - 85))  # trough minus the pattern's height
+
+    def status(tail):
+        st, _ = _setups_and_signals(_path(shape + tail))
+        return [(x.status, x.resolved) for x in st if x.rule == "Double top" and x.known == u.known]
+    assert status([(85, 101), (100, 101)]) == [("Failed", 85)]      # closed above the higher peak first
+    assert status([(100, 90)]) == [("Expired", 90)]                 # no break before the deadline
+    broke = status([(82, 90), (86, 84), (100, 84)])
+    assert broke and broke[0][0] == "Broke out"
+
+
+def test_status_counts_table():
+    from atrade.forming import status_counts
+    setups, sigs = _setups_and_signals(_path([(0, 80), (30, 100), (45, 85), (60, 100.5), (80, 90)]))
+    t = status_counts(setups, sigs)
+    row = t.set_index("rule").loc["Double top"]
+    assert row["shapes"] >= 1 and row["Forming"] >= 1

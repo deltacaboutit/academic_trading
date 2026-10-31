@@ -144,3 +144,52 @@ def cross_down(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     a1, b1 = shift(a), shift(b)
     with np.errstate(invalid="ignore"):
         return (a < b) & (a1 > b1)
+
+
+# ---- Added from PatternFinder 2.5 (not in the book) -------------------------
+
+def wilder_average(x: np.ndarray, w: int) -> np.ndarray:
+    """Wilder's smoothing (Wilder 1978): the first value is the simple average of
+    the first w values; after that each value is (previous x (w - 1) + new) / w."""
+    x = np.asarray(x, float)
+    out = np.full(len(x), np.nan)
+    valid = np.flatnonzero(~np.isnan(x))
+    if len(valid) < w:
+        return out
+    i0 = valid[0]
+    out[i0 + w - 1] = np.mean(x[i0:i0 + w])
+    for t in range(i0 + w, len(x)):
+        out[t] = out[t - 1] if np.isnan(x[t]) else (out[t - 1] * (w - 1) + x[t]) / w
+    return out
+
+
+def true_range(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
+    """Wilder's true range: the largest of today's high - low, |high - yesterday's
+    close| and |low - yesterday's close|. The first day has no previous close."""
+    h, l, c = (np.asarray(a, float) for a in (high, low, close))
+    pc = shift(c)
+    tr = np.fmax(h - l, np.fmax(np.abs(h - pc), np.abs(l - pc)))
+    tr[0] = h[0] - l[0]
+    return tr
+
+
+def atr(high, low, close, w: int = 14) -> np.ndarray:
+    """Average True Range (Wilder 1978): the typical size of one day's price range.
+    Empty for the first w - 1 days."""
+    return wilder_average(true_range(high, low, close), w)
+
+
+def atr_filled(high, low, close, w: int = 14) -> np.ndarray:
+    """ATR with the first w - 1 days filled by the running average of the true range."""
+    tr = true_range(high, low, close)
+    out = atr(high, low, close, w)
+    run = np.cumsum(np.nan_to_num(tr)) / np.arange(1, len(tr) + 1)
+    return np.where(np.isnan(out), run, out)
+
+
+def obv(close: np.ndarray, volume: np.ndarray) -> np.ndarray:
+    """On-Balance Volume (Granville 1963): a running total of volume. A day that
+    closes higher adds its volume; a day that closes lower subtracts it."""
+    c = np.asarray(close, float)
+    step = np.sign(np.nan_to_num(np.diff(c, prepend=c[0]))) * np.nan_to_num(np.asarray(volume, float))
+    return np.cumsum(step)
