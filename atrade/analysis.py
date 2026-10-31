@@ -77,7 +77,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
     gv = gauge_values(c, s)
     sig_gauge = gauge_signals(c, s, gv)
     sig_zone, zone_events, zone_hist = zone_analysis(c, s)
-    sig_pat = _dedupe(all_patterns(c, s, state))
+    sig_pat = _dedupe(all_patterns(c, s, state, df["High"].to_numpy(float), df["Low"].to_numpy(float)))
     for sg in sig_pat:
         tr = pattern_trade(sg, o, c, s)
         sg.extra["trade"] = tr

@@ -436,7 +436,232 @@ def rounding(close, s, trend_state):
     return out
 
 
-def all_patterns(close, s, trend_state) -> list[Signal]:
+# ===================================================================
+# Patterns added from PatternFinder 2.5. They are not in the book, so
+# each rule names its own source; "tool choice" marks our own choices.
+# They follow the same no-look-ahead rule as the patterns above.
+# ===================================================================
+
+# ------------------------------------------------ triangles and rectangle --
+
+def _first_break_either(close, start, known, deadline, upper, lower):
+    """First day e with max(start, known) <= e < deadline on which the close is
+    above `upper` (returns e, +1) or below `lower` (returns e, -1)."""
+    for e in range(max(start, known), min(len(close), int(math.ceil(deadline)))):
+        c = close[e]
+        if np.isnan(c):
+            continue
+        if c > _lv(upper, e):
+            return e, +1
+        if c < _lv(lower, e):
+            return e, -1
+    return None, 0
+
+
+def _flat(v):
+    return (max(v) - min(v)) / min(v) <= TOL
+
+
+def triangles_rectangles(close, s, trend_state):
+    """Ascending, descending and symmetrical triangles and rectangles.
+
+    Shape: five alternating turning points, as in Lo, Mamaysky & Wang (2000)
+    (their triangle and rectangle use E1..E5). A side is "flat" when its points
+    are within TOL (4%) of each other, the same tolerance as triple tops.
+      Ascending triangle   flat tops, rising lows        -> breaks up (Edwards & Magee)
+      Descending triangle  flat lows, falling tops       -> breaks down (Edwards & Magee)
+      Symmetrical triangle falling tops and rising lows  -> breaks either way
+      Rectangle            flat tops and flat lows       -> breaks either way
+    Triangles must break between half and three-quarters of the way from the
+    first point to the apex, where the two lines meet (Edwards & Magee).
+    Rectangles must break within one pattern width of the last point (as for
+    head-and-shoulders). Target: the pattern's height at its widest part,
+    measured from the broken line (Edwards & Magee; Murphy).
+    """
+    out, seen = [], set()
+    for kinds, w in ((("asc", "desc", "sym"), int(s["w_triangle"])), (("rect",), int(s["w_rect"]))):
+        idx, pr, kd, kn = _locals(close, w)
+        for i in range(len(idx) - 4):
+            seq = "".join(kd[i:i + 5])
+            if seq not in ("PTPTP", "TPTPT"):
+                continue
+            t = idx[i:i + 5]; p = pr[i:i + 5]
+            hi = [(a, b) for a, b, k in zip(t, p, seq) if k == "P"]
+            lo = [(a, b) for a, b, k in zip(t, p, seq) if k == "T"]
+            hv = [b for _, b in hi]; lv = [b for _, b in lo]
+            falling = all(x > y for x, y in zip(hv, hv[1:]))
+            rising = all(x < y for x, y in zip(lv, lv[1:]))
+            fh, fl = _flat(hv), _flat(lv)
+            if fh and fl:
+                # the band must be taller than the flatness tolerance, or tops and bottoms blur (tool choice)
+                kind = "rect" if min(hv) > max(lv) and np.mean(hv) > (1 + TOL) * np.mean(lv) else None
+            elif fh and rising:
+                kind = "asc"
+            elif fl and falling:
+                kind = "desc"
+            elif falling and rising:
+                kind = "sym"
+            else:
+                kind = None
+            if kind not in kinds:
+                continue
+            t1, t5, known = int(t[0]), int(t[-1]), int(kn[i + 4])
+            W = t5 - t1
+            sloped_up = _line(hi[0][0], hi[0][1], hi[-1][0], hi[-1][1])
+            sloped_lo = _line(lo[0][0], lo[0][1], lo[-1][0], lo[-1][1])
+            upper = (0.0, max(hv)) if kind in ("asc", "rect") else sloped_up
+            lower = (0.0, min(lv)) if kind in ("desc", "rect") else sloped_lo
+            H = _lv(upper, t1) - _lv(lower, t1)
+            if H <= 0:
+                continue
+            if kind == "rect":
+                e, d = _first_break_either(close, t5 + 1, known, t5 + W, upper, lower)
+            else:
+                ts = _apex(upper, lower)
+                if math.isinf(ts) or ts <= t5:
+                    continue
+                span = ts - t1
+                deadline = t1 + 0.75 * span
+                if kind == "sym":
+                    e, d = _first_break_either(close, t5 + 1, known, deadline, upper, lower)
+                elif kind == "asc":
+                    d = +1; e = _first_break(close, t5 + 1, known, deadline, upper, +1, opposite=lower)
+                else:
+                    d = -1; e = _first_break(close, t5 + 1, known, deadline, lower, -1, opposite=upper)
+                if e is None or not e - t1 > 0.5 * span:
+                    continue
+            rule = {"asc": "Ascending triangle", "desc": "Descending triangle",
+                    "sym": "Symmetrical triangle", "rect": "Rectangle"}[kind]
+            if e is None or (rule, e, d) in seen:
+                continue                    # two overlapping five-point windows can find the same breakout
+            seen.add((rule, e, d))
+            line = upper if d > 0 else lower
+            where = "above the upper line" if d > 0 else "below the lower line"
+            out.append(Signal(rule, "reversal", "pattern", d, int(e), target=float(_lv(line, e) + d * H),
+                              time_limit=int(e + W), line=line, points=[(a, b, "") for a, b in zip(t, p)],
+                              text=f"{rule}: close broke {where}.",
+                              extra={"height": H, "width": W, "trend_before": _trend_label(trend_state, t1)}))
+    return out
+
+
+# --------------------------------------------------------- cup and handle --
+
+def cup_and_handle(close, s, trend_state):
+    """Cup and handle (O'Neil). Bullish only.
+
+    Two peaks (the rims) within TOL (4%) of each other, 7 to 65 weeks apart, with
+    no close between them above the lower rim. The cup is 12-50% deep, measured
+    from the left rim (O'Neil), with its low in the middle 60% of the cup (tool
+    choice, as in PatternFinder 2.5). It must be round, not V-shaped (O'Neil):
+    it must pass the book's circle test used for rounding bottoms, and at least
+    half of its closes must lie in the lowest 40% of its depth (tool choice: a
+    round cup spends about 60% of its time there, a straight-sided V only 40%).
+    After the right rim comes the handle, a small dip that stays in the cup's
+    upper half (O'Neil) and lasts at most half the cup's width and 40 days (tool
+    choice, as in PatternFinder 2.5). The signal is the first close above the right rim once
+    that rim is confirmed, which makes the handle at least w_cup days long.
+    Target: the rim plus the cup's depth (Bulkowski's measure rule).
+    """
+    w = int(s["w_cup"]); b = float(s["round_bounds"]); tfit = float(s["round_fit"])
+    mn_w, mx_w = int(s["cup_min_days"]), int(s["cup_max_days"])
+    mn_d, mx_d = float(s["cup_min_depth"]), float(s["cup_max_depth"])
+    tp = rolling_window(close, w)
+    pk = tp[tp["kind"] == "P"]
+    pt, pp, pkn = pk["idx"].to_numpy(int), pk["price"].to_numpy(float), pk["known"].to_numpy(int)
+    best = {}
+    for a in range(len(pt)):
+        tL, PL = pt[a], pp[a]
+        for c in range(a + 1, len(pt)):
+            tR, PR = pt[c], pp[c]
+            width = int(tR - tL)
+            if width > mx_w:
+                break
+            inside = close[tL + 1:tR]
+            if np.isnan(inside).any() or inside.max() > PL:
+                break                       # a close above the left rim: no wider cup from this rim either
+            if PR > (1 + TOL) * PL:
+                break                       # this peak sits inside every wider cup
+            if width < mn_w or abs(PR - PL) / min(PL, PR) > TOL or inside.max() > PR:
+                continue
+            tB = tL + int(np.argmin(close[tL:tR + 1])); B = float(close[tB])
+            depth = min(PL, PR) - B
+            if not (mn_d <= (PL - B) / PL <= mx_d and 0.2 <= (tB - tL) / width <= 0.8):
+                continue
+            seg = close[tL:tR + 1]
+            if np.mean(seg <= B + 0.4 * depth) < 0.5:
+                continue
+            fit = _circle_fit(seg, b)
+            if fit < tfit:
+                continue
+            max_handle = max(w, min(40, width // 2))
+            e = _first_break(close, tR + 1, int(pkn[c]), tR + max_handle + 1, (0.0, PR), +1,
+                             opposite=(0.0, PR - 0.5 * depth))
+            if e is None:
+                continue
+            tH = tR + 1 + int(np.argmin(close[tR + 1:e]))
+            sig = Signal("Cup and handle", "reversal", "pattern", +1, int(e), target=float(PR + depth),
+                         time_limit=int(e + width), line=(0.0, float(PR)),
+                         points=[(tL, float(PL), "left rim"), (tB, B, "bottom"), (tR, float(PR), "right rim"),
+                                 (tH, float(close[tH]), "handle"), (int(e), float(close[e]), "break")],
+                         text="Cup and handle: close broke above the right rim after the handle.",
+                         extra={"fit": fit, "width": width, "depth": depth / PL,
+                                "trend_before": _trend_label(trend_state, int(tL))})
+            if e not in best or fit > best[e].extra["fit"]:
+                best[e] = sig
+    return [best[e] for e in sorted(best)]
+
+
+# -------------------------------------------------------- island reversals --
+
+def islands(high, low, close, s, trend_state):
+    """Island top and island bottom (Murphy, Charting Made Easy).
+
+    Island top: a gap up (today's low above yesterday's high) to a new
+    `island_prior_days`-day closing high, so the gap ends a rise (tool choice).
+    Then, within `island_max_days` days, a gap down below every low of the
+    island days, which leaves them stranded. The signal day is the day of the
+    second gap. If the island days fall back into the first gap first, there is
+    no island. Island bottom: the same, upside down.
+    Line: the island's edge; closing back across it means the second gap
+    has been filled. Target: the island's own height, measured from that edge
+    (tool choice, as in PatternFinder 2.5; Murphy gives no target).
+    Time limit: `default_hold` days (Murphy gives none).
+    Needs daily highs and lows, so it is skipped when only closes are known.
+    """
+    out = []
+    m, k = int(s["island_max_days"]), int(s["island_prior_days"])
+    hold = int(s["default_hold"])
+    for top in (True, False):
+        # an island bottom is an island top on the upside-down chart
+        H, L, C = (high, low, close) if top else (-low, -high, -close)
+        f = 1.0 if top else -1.0
+        n = len(C)
+        for a in range(k, n - 1):
+            if not (L[a] > H[a - 1] and C[a] > np.max(C[a - k:a])):
+                continue
+            for e in range(a, min(n - 1, a + m)):
+                isl_lo = np.min(L[a:e + 1])
+                if np.isnan(isl_lo) or isl_lo <= H[a - 1]:
+                    break                     # fell back into the first gap: no island
+                if H[e + 1] < isl_lo:         # second gap: the island is complete
+                    j = a + int(np.argmax(H[a:e + 1])); isl_hi = float(H[j])
+                    height = isl_hi - isl_lo
+                    rule = "Island top" if top else "Island bottom"
+                    out.append(Signal(rule, "reversal", "pattern", -1 if top else +1, int(e + 1),
+                                      target=float(f * (isl_lo - height)), time_limit=int(e + 1 + hold),
+                                      line=(0.0, float(f * isl_lo)),
+                                      points=[(a - 1, float(f * H[a - 1]), "gap"), (j, float(f * isl_hi), "island"),
+                                              (e + 1, float(f * H[e + 1]), "gap")],
+                                      text=f"{rule}: price gapped {'down' if top else 'up'} and left the island behind.",
+                                      extra={"island_days": e - a + 1,
+                                             "trend_before": _trend_label(trend_state, a - 1)}))
+                    break
+    return out
+
+
+def all_patterns(close, s, trend_state, high=None, low=None) -> list[Signal]:
+    """Every chart pattern. Island reversals need daily highs and lows; without
+    them (the random-price tests use closes only) they are left out."""
     close = np.asarray(close, float)
     sigs = []
     sigs += head_and_shoulders(close, s, trend_state)
@@ -444,6 +669,10 @@ def all_patterns(close, s, trend_state) -> list[Signal]:
     sigs += double_tops_bottoms(close, s, trend_state)
     sigs += flags_pennants_wedges(close, s, trend_state)
     sigs += rounding(close, s, trend_state)
+    sigs += triangles_rectangles(close, s, trend_state)
+    sigs += cup_and_handle(close, s, trend_state)
+    if high is not None and low is not None:
+        sigs += islands(np.asarray(high, float), np.asarray(low, float), close, s, trend_state)
     for g in sigs:
         g.weight = float(s["wt_pattern"])
     return sigs
