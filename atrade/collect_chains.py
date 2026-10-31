@@ -15,7 +15,10 @@ so it does not depend on when the collector happens to run (tool choice).
 
 Session day: the NYSE trading day whose close has passed (4:15 pm New York time or later),
 otherwise the previous trading day. A stock that already has the session is skipped, so the
-evening run and the catch-up runs only fetch what is still missing.
+evening run and the catch-up runs only fetch what is still missing. A stock that failed on 5 sessions
+in a row (e.g. delisted, or Yahoo stopped serving it) is skipped, so it doesn't make every catch-up
+run do the full job; it gets one try on the first session of each week, and is collected again once
+it works. --force and --tickers ignore the skip.
 
 Then, as for every other source: junk IVs are filled (options_store.clean_iv), the day is appended
 to the stock's file, and the summary gets put/call ratios, average IV, the 30-day IV index
@@ -44,6 +47,7 @@ MIN_OI = 5               # contracts with open interest below 5 are dropped (Wat
 CLOSE_DONE = dt.time(16, 15)
 PAUSE = 1.0              # seconds between stocks, to stay under Yahoo's rate limit (Watchtower used 2)
 TRIES = 3
+STALL_DAYS = 5           # a stock that failed on 5 sessions in a row is skipped, and tried only once a week
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO"
 DEFAULT_RATE = 0.045
 YEAR_SECONDS = 365 * 24 * 3600
@@ -165,20 +169,54 @@ def already_have(session: dt.date, store=None) -> set[str]:
     return set(s.loc[s["date"].dt.date == session, "ticker"])
 
 
+def load_state(store=None) -> dict:
+    p = OS.paths(store)["root"] / "collect_state.json"
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def stalled(session: dt.date, state: dict, days: int = STALL_DAYS) -> set[str]:
+    """Stocks that failed (or were skipped) on each of the last `days` recorded sessions before this one."""
+    past = [state[k] for k in sorted(state) if k < str(session)][-days:]
+    if len(past) < days:
+        return set()
+    bad = [set(s.get("failed", {})) | set(s.get("skipped", [])) for s in past]
+    return set.intersection(*bad)
+
+
+def first_session_of_week(session: dt.date) -> bool:
+    prev = trading_days(session - dt.timedelta(days=10), session - dt.timedelta(days=1))
+    return not prev or prev[-1].isocalendar()[:2] != session.isocalendar()[:2]
+
+
+def to_skip(session: dt.date, state: dict) -> set[str]:
+    """Stalled stocks are not fetched, except for one try on the first session of each week
+    (so a stock that works again is picked up within a week)."""
+    s = stalled(session, state)
+    if first_session_of_week(session):
+        today = state.get(str(session), {})
+        s &= set(today.get("failed", {})) | set(today.get("skipped", []))   # already had this week's try
+    return s
+
+
 def collect(tickers=None, session=None, force=False, store=None, chain_dir=None, yf=None,
-            pause=PAUSE, sleep=time.sleep, log=print) -> dict:
+            pause=PAUSE, sleep=time.sleep, log=print, skip_stalled=True) -> dict:
     session = session or session_day()
     uni = [t.upper() for t in (tickers or OS.universe(store))]
-    todo = uni if force else [t for t in uni if t not in already_have(session, store)]
+    state = load_state(store)
+    skip = set() if force or not skip_stalled else to_skip(session, state) & set(uni)
+    todo = uni if force else [t for t in uni if t not in already_have(session, store) and t not in skip]
     log(f"Session {session}: {len(uni)} stocks in the list, {len(todo)} still to collect.")
+    if skip:
+        log(f"Skipped (failed on {STALL_DAYS} sessions in a row; tried again on the first session of the week): "
+            f"{' '.join(sorted(skip))}")
     if todo and yf is None and market_open_now():
         log("The market is open: Yahoo's chains are the live day, not a finished session. "
             "Nothing collected; the evening run will do it.")
-        return {"session": str(session), "todo": len(todo), "ok": 0, "failed": {}, "market_open": True}
+        return {"session": str(session), "todo": len(todo), "ok": 0, "failed": {}, "skipped": sorted(skip),
+                "market_open": True}
     st_path = OS.paths(store)["root"] / "collect_state.json"
-    state = json.loads(st_path.read_text()) if st_path.exists() else {}
     if not todo:
-        return {"session": str(session), "todo": 0, "ok": 0, "failed": {}}
+        return {"session": str(session), "todo": 0, "ok": 0, "failed": {}, "skipped": sorted(skip)}
     rate = risk_free_rate(session, store)
     log(f"Risk-free rate (3-month T-bill): {rate:.2%}")
     ok, failed, summ = [], {}, []
@@ -223,15 +261,15 @@ def collect(tickers=None, session=None, force=False, store=None, chain_dir=None,
         P["universe"].parent.mkdir(parents=True, exist_ok=True)
         P["universe"].write_text("\n".join(sorted(set(uni) | set(ok))) + "\n")
     have = already_have(session, store) & set(uni)
-    state[str(session)] = {"stocks": len(uni), "collected": len(have), "failed": failed,
+    state[str(session)] = {"stocks": len(uni), "collected": len(have), "failed": failed, "skipped": sorted(skip),
                            "last_run": dt.datetime.now(NY).isoformat(timespec="minutes"),
                            "minutes": round((time.time() - started) / 60, 1)}
     state = dict(sorted(state.items())[-30:])                # keep the last 30 sessions
     st_path.parent.mkdir(parents=True, exist_ok=True)
     st_path.write_text(json.dumps(state, indent=1))
     log(f"Session {session}: {len(have)} of {len(uni)} stocks collected "
-        f"({len(ok)} this run, {len(failed)} failed) in {state[str(session)]['minutes']} minutes.")
-    return {"session": str(session), "todo": len(todo), "ok": len(ok), "failed": failed,
+        f"({len(ok)} this run, {len(failed)} failed, {len(skip)} skipped) in {state[str(session)]['minutes']} minutes.")
+    return {"session": str(session), "todo": len(todo), "ok": len(ok), "failed": failed, "skipped": sorted(skip),
             "collected": len(have), "stocks": len(uni)}
 
 
@@ -324,14 +362,17 @@ def main(argv=None):
         return 0
     if a.check or a.check_complete:
         have = already_have(session) & set(uni)
-        print(f"todo={len(uni) - len(have)}")
-        print(f"Session {session}: {len(have)} of {len(uni)} stocks collected.")
-        if a.check_complete and len(have) < a.min_share * len(uni):
-            missing = sorted(set(uni) - have)
+        skip = set() if a.tickers else (to_skip(session, load_state()) & set(uni)) - have
+        wanted = len(uni) - len(skip)
+        print(f"todo={wanted - len(have)}")
+        print(f"Session {session}: {len(have)} of {wanted} stocks collected"
+              f"{f' ({len(skip)} stalled stocks skipped: ' + ' '.join(sorted(skip)) + ')' if skip else ''}.")
+        if a.check_complete and len(have) < a.min_share * wanted:
+            missing = sorted(set(uni) - have - skip)
             print(f"Missing: {' '.join(missing[:60])}{' ...' if len(missing) > 60 else ''}")
             return 1
         return 0
-    collect(uni, session, a.force)
+    collect(uni, session, a.force, skip_stalled=not a.tickers)
     return 0
 
 

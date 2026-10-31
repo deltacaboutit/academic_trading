@@ -33,8 +33,9 @@ def yahoo_like(n_exp=4, spot=100.0, seed=0):
 
 
 class FakeYF:
-    def __init__(self, chains, fail=(), stale=()):
+    def __init__(self, chains, fail=(), stale=(), session=SESSION):
         self.chains, self.fail, self.stale, self.calls = chains, set(fail), set(stale), []
+        self.session = session
 
     def Ticker(self, t):
         yf = self
@@ -43,7 +44,7 @@ class FakeYF:
             def history(self, period=None, auto_adjust=False):
                 if t in yf.fail:
                     raise ConnectionError("Too Many Requests")
-                last = SESSION - dt.timedelta(days=1) if t in yf.stale else SESSION
+                last = yf.session - dt.timedelta(days=1) if t in yf.stale else yf.session
                 idx = pd.bdate_range(end=last, periods=5)
                 return pd.DataFrame({"Close": np.linspace(96, 100, 5)}, index=idx)
             def option_chain(self, e):
@@ -106,3 +107,52 @@ def test_no_collection_while_the_market_is_open():
     assert not CC.market_open_now(dt.datetime(2026, 10, 21, 8, 30, tzinfo=ny))
     assert not CC.market_open_now(dt.datetime(2026, 10, 21, 16, 30, tzinfo=ny))
     assert not CC.market_open_now(dt.datetime(2026, 10, 24, 11, 0, tzinfo=ny))     # Saturday
+
+
+def _state(days, failed_by_day):
+    return {d.isoformat(): {"failed": {t: "ValueError: no price history" for t in failed_by_day(i)}}
+            for i, d in enumerate(days)}
+
+
+def test_stock_that_failed_five_sessions_in_a_row_is_skipped(tmp_path, monkeypatch):
+    monkeypatch.setattr(CC, "risk_free_rate", lambda s, store=None: 0.04)
+    session = dt.date(2026, 10, 21)                                         # a Wednesday: not a retry day
+    past = CC.trading_days(dt.date(2026, 10, 14), dt.date(2026, 10, 20))   # the 5 sessions before it
+    state = _state(past, lambda i: ["DEAD"] + (["SICK"] if i > 0 else []))  # SICK failed only 4 in a row
+    (tmp_path / "collect_state.json").write_text(CC.json.dumps(state))
+    assert CC.stalled(session, state) == {"DEAD"}
+    yf = FakeYF(yahoo_like(), fail={"DEAD", "SICK"}, session=session)
+    r = CC.collect(["AAA", "DEAD", "SICK"], session, store=tmp_path, chain_dir=tmp_path / "chains", yf=yf,
+                   sleep=lambda s: None, log=lambda m: None)
+    assert r["skipped"] == ["DEAD"] and set(r["failed"]) == {"SICK"}
+    assert all(t != "DEAD" for t, _ in yf.calls)
+    saved = CC.load_state(tmp_path)[session.isoformat()]
+    assert saved["skipped"] == ["DEAD"]                                     # keeps the streak going
+    assert CC.stalled(session + dt.timedelta(days=1), CC.load_state(tmp_path)) == {"DEAD", "SICK"}  # 5th miss
+
+
+def test_stalled_stock_gets_one_try_on_the_first_session_of_the_week(tmp_path, monkeypatch):
+    monkeypatch.setattr(CC, "risk_free_rate", lambda s, store=None: 0.04)
+    monday = dt.date(2026, 10, 26)
+    past = CC.trading_days(dt.date(2026, 10, 19), dt.date(2026, 10, 23))
+    (tmp_path / "collect_state.json").write_text(CC.json.dumps(_state(past, lambda i: ["DEAD"])))
+    run = lambda: CC.collect(["DEAD"], monday, store=tmp_path, chain_dir=tmp_path / "chains",
+                             yf=FakeYF(yahoo_like(), fail={"DEAD"}, session=monday), sleep=lambda s: None, log=lambda m: None)
+    first = run()
+    assert first["skipped"] == [] and set(first["failed"]) == {"DEAD"}      # the weekly try
+    assert run()["skipped"] == ["DEAD"]                                     # the catch-up runs don't retry it
+    assert run()["skipped"] == ["DEAD"]
+
+
+def test_force_and_explicit_tickers_ignore_the_skip(tmp_path, monkeypatch):
+    monkeypatch.setattr(CC, "risk_free_rate", lambda s, store=None: 0.04)
+    session = dt.date(2026, 10, 21)
+    past = CC.trading_days(dt.date(2026, 10, 14), dt.date(2026, 10, 20))
+    (tmp_path / "collect_state.json").write_text(CC.json.dumps(_state(past, lambda i: ["DEAD"])))
+    kw = dict(store=tmp_path, chain_dir=tmp_path / "chains", sleep=lambda s: None, log=lambda m: None)
+    assert CC.collect(["DEAD"], session, yf=FakeYF(yahoo_like(), session=session), **kw)["skipped"] == ["DEAD"]
+    assert CC.collect(["DEAD"], session, force=True, yf=FakeYF(yahoo_like(), session=session), **kw)["ok"] == 1
+    (tmp_path / "chains").mkdir(exist_ok=True)
+    for f in tmp_path.glob("summary/*"): f.unlink()                         # so DEAD needs the session again
+    r = CC.collect(["DEAD"], session, yf=FakeYF(yahoo_like(), session=session), skip_stalled=False, **kw)
+    assert r["ok"] == 1 and r["skipped"] == []
