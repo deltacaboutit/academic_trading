@@ -167,6 +167,8 @@ The inbox appears after the first nightly sync run. On your own computer, the sa
   it; the daily collector calculates it from the chain on every other day. On the days where both exist, the two agree to within
   a few hundredths of a point. GEX levels: see *How the GEX levels are calculated* below.
 
+**Tuning the Squeeze Play II-A thresholds.** The entry threshold, exit threshold and price-trigger days (for longs and shorts separately) are settings, not fixed numbers — see `sp2a_entry`, `sp2a_exit`, `sp2a_trig_long` and `sp2a_trig_short` in `atrade/config.py`. A time-split tuning study (tune on the earlier years, test on the later years, across all S&P 500 stocks, costs included) is written up in **`results/sentiment_tuning/FINDINGS.md`**, with the full results tables alongside it. Its short version: on the long-history market-wide sentiment sources (the VIX and the Cboe equity put/call ratio), **no setting beat buy-and-hold, in or out of sample** — so the extended system built from that study is off by default and does not vote.
+
 ### GEX (gamma exposure) — an add-on, not from the books
 
 The tool draws the **gamma flip, call wall and put wall** on the chart, and shows them on the Rating tab.
@@ -352,6 +354,7 @@ atrade/                    the analysis engine, one file per framework
 options_data/              daily options summary + sync bookkeeping (full chains are on the Release; see section 3)
 .github/workflows/         options_collect.yml (daily collection), options_sync.yml (temporary Watchtower backup), options_import.yml, research.yml
 results/                   research results (bootstrap per stock, summaries, tuned weights)
+  sentiment_tuning/        Framework 6 tuning study: FINDINGS.md + all-combination and per-stock tables
 price_data/                25 years of daily prices per stock (test and validation data)
 tests/                     formula, look-ahead, data-store and GEX checks
 data/                      created on first run: saved prices and settings (not uploaded)
