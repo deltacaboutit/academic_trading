@@ -42,3 +42,8 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   reliably cuts drawdowns (~−50%→−26% in 2008; ~80% of stocks improve) but roughly
   halves return, so it is a risk dial, not a return booster. Research only, not
   wired into the rating engine.
+- **Sector volatility sources** (`results/sentiment_tuning/SECTOR_VOL_SOURCES.md`):
+  inventory of per-sector volatility trackers. Dedicated CBOE implied-vol indices
+  exist only for a few (VXN→tech/comm, OVX→energy, GVZ→materials, VXD→industrials,
+  RVX→small caps); all other sectors must use realized vol from the SPDR ETF
+  (XLF/XLV/XLY/XLP/XLU/XLRE…).
