@@ -34,3 +34,11 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   put/call ratio). **No setting beat buy-and-hold in or out of sample.** The
   extended system this produced is off by default (`sp2a_extended_enable`) and,
   when on, is back-tested only (does not vote). Full tables are in that folder.
+- **Other volatility indices** (`results/sentiment_tuning/alt_indices_scan.csv`,
+  summarised in FINDINGS.md): the same sweep on VXN, VXO, VXV, VXD, RVX, VVIX, OVX,
+  GVZ, the VXN−VIX spread and the VXV/VIX term structure — none beats buy-and-hold.
+- **Volatility regime overlay** (`results/sentiment_tuning/REGIME_OVERLAY.md`): a
+  VIX-trend + term-structure signal that moves to cash in high-risk regimes. It
+  reliably cuts drawdowns (~−50%→−26% in 2008; ~80% of stocks improve) but roughly
+  halves return, so it is a risk dial, not a return booster. Research only, not
+  wired into the rating engine.
