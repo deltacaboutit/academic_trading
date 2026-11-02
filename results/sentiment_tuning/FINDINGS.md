@@ -113,6 +113,36 @@ them); the ones it loses to worst are the big winners it missed (NVDA, AMD, PLTR
 - `perstock_test_vix.csv`, `perstock_test_pc.csv` — per-stock test-period results
   for the recommended settings.
 
+## Update 2026-11-02 — other volatility indices (all fail the same way)
+
+To check whether the VIX was simply the wrong volatility measure, the same
+Squeeze Play II-A sweep was run across all stocks, with a time split and costs,
+on every long-history alternative we could obtain (see `alt_indices_scan.csv`):
+
+| Index | Span | Best tune edge | % stocks beat B&H | Combos beating B&H | Best test edge |
+|---|---|---|---|---|---|
+| VXN (Nasdaq-100) | 2001–2026 | −1.91 | 3% | 0 / 72 | −0.85 |
+| VXO (S&P 100) | 1986–2021 | −0.90 | 11% | 0 / 72 | −1.46 |
+| VXV (VIX 3-month) | 2007–2026 | −1.45 | 5% | 0 / 72 | −0.53 |
+| VXD (Dow) | 1997–2026 | −1.84 | 2% | 0 / 72 | −0.92 |
+| RVX (Russell 2000) | 2004–2026 | −1.73 | 4% | 0 / 72 | −0.72 |
+| VVIX (vol of vol) | 2007–2026 | −1.27 | 7% | 0 / 72 | −0.62 |
+| OVX (crude oil) | 2007–2026 | −1.22 | 9% | 0 / 72 | −0.57 |
+| GVZ (gold) | 2008–2026 | −1.47 | 6% | 0 / 72 | −0.47 |
+| VXN − VIX spread ("QQQ−SPX vol") | 2007–2026 | −0.74 | 22% | 0 / 72 | −0.63 |
+| VXV / VIX term-structure ratio | 2007–2026 | −1.41 | 8% | 0 / 72 | −0.65 |
+
+**Every one fails**, in and out of sample. Swapping the volatility measure does
+not help: the problem is the Squeeze Play II-A trade logic (contrarian, frequent,
+in-and-out, with losing shorts), not the choice of sentiment series.
+
+**Data notes.** Sector volatility indices for Technology and Financials
+(the "VIXTL"/"VIXFN" the request asked about) do not exist with any accessible
+history; only an Energy sector index (VXXLE, 2011–2022) and the commodity proxies
+OVX (oil) and GVZ (gold) exist, and OVX/GVZ were tested above. "VIXEQ" could not
+be identified as a retrievable series. Single-name option-vol indices (VXAPL etc.)
+were discontinued and have no downloadable history.
+
 ## Recommended next step
 
 Market-wide VIX/put/call proxies are the wrong input. The only path that could
