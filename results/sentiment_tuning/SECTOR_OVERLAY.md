@@ -58,3 +58,24 @@ while keeping ~9% annual return. Still a **risk dial, not a return booster.**
 - Real Estate (XLRE) tracker only starts 2015; those stocks are mostly un-timed
   before then. 6% of stocks had no GICS match and were excluded.
 - Cash earns 0% (no interest), slightly understating the overlays.
+
+## Hybrid refinement (2026-11-03) — `sector_hybrid.csv`
+
+Two refinements were tested (equal-weight market portfolio, same split):
+
+| Config | CAGR tune/test | Max drawdown tune/test | Calmar tune/test |
+|---|---|---|---|
+| Buy & hold | 17.9 / 16.8 | −50.6 / −38.3 | 0.35 / 0.44 |
+| VIX W20 | 5.3 / 9.4 | −39.2 / −14.0 | 0.14 / 0.67 |
+| Sector realized W100 (prior best) | 9.2 / 9.1 | −34.9 / −13.1 | 0.26 / **0.70** |
+| Sector implied-where-avail W100 | 9.3 / 8.0 | −35.0 / −14.3 | 0.27 / 0.56 |
+| Sector implied + short/long (20 OR 100) | 6.8 / 5.2 | **−22.9** / −13.7 | 0.30 / 0.38 |
+
+- **Implied vs realized**: using OVX/GVZ/VXD (implied) for energy/materials/
+  industrials instead of realized ETF vol was ≈neutral — realized was already fine.
+- **Short + long windows** (risk-off above the 20-day OR the 100-day average):
+  deepens drawdown protection (tune −35% → −23%; beats the prior best on drawdown
+  for ~60% of stocks in both eras) but gives up more return (CAGR ~9% → ~6%) and
+  does not improve test Calmar. A more-defensive dial, not a strict win.
+- **Best risk-adjusted overall remains sector-realized W=100** (test Calmar 0.70).
+  Use the short+long hybrid only if minimizing drawdown matters more than return.
