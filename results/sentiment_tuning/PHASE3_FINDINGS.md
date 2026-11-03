@@ -72,6 +72,24 @@ The sign **flips** between eras: catching capitulating stocks worked brilliantly
 in the fast-recovery 2016+ markets and badly in the grinding 2008 bear. Not a
 dependable edge.
 
+### 4b. Individual-stock bottom DETECTION — modest but consistent
+
+Reframed as *detection* (does the flag land on each stock's own major lows, by
+ZigZag 20%?) rather than forward-return prediction, a single shared rule (stock
+vol-spike > 1.4, drawdown < −20%, market stressed) is stable across eras:
+
+| | Recall (lows caught) | Precision | Median lead/lag |
+|---|---|---|---|
+| Tune (pre-2016) | 49% | 53% | −1 day |
+| Test (2016+) | 52% | 54% | 0 days |
+
+So ~half of each stock's major lows are flagged as capitulation, coincident with
+the low, and ~half the alerts mark a true major low — consistent in and out of
+sample. It catches market-driven stock bottoms and misses idiosyncratic ones
+(the rule requires market stress). Useful as a stock-level stress/bottom flag,
+with the same caveat as the market: it is coincident detection, not a forward
+predictor. Rule saved in `phase3_model_stock_turns.json`.
+
 ## Bottom line
 
 The correlation-to-volatility composite is a good **coincident detector of major
