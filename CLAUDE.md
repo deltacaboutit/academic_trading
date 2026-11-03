@@ -47,3 +47,8 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   exist only for a few (VXN→tech/comm, OVX→energy, GVZ→materials, VXD→industrials,
   RVX→small caps); all other sectors must use realized vol from the SPDR ETF
   (XLF/XLV/XLY/XLP/XLU/XLRE…).
+- **Sector-matched overlay** (`results/sentiment_tuning/SECTOR_OVERLAY.md`): timing
+  each stock by its own sector's volatility (VXN for tech/comm, realized ETF vol
+  elsewhere) modestly beats the market-wide VIX overlay on drawdown (market −51%
+  B&H → −35% tune / −13% test at W=100) while keeping slightly more return, but
+  still roughly halves return vs buy-and-hold. A risk dial, research only.
