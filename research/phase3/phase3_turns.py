@@ -70,8 +70,8 @@ def main():
 
         # ---- BOTTOM detector: tune (vspike>a, corr>b, dd<d) on train troughs ----
         bestb = None
-        for a, b, d in itertools.product([1.1,1.2,1.3,1.4],[0.26,0.30,0.34],[-0.08,-0.12,-0.16]):
-            mask = (df["vspike"]>a)&(df["corr"]>b)&(df["dd"]<d)
+        for a, b, d in itertools.product([1.1,1.2,1.3,1.4],[0.22,0.26,0.30,0.34],[-0.10,-0.14,-0.18]):
+            mask = (df["vspike"]>a)&(df["corr20"]>b)&(df["dd"]<d)   # 20-day correlation (fast)
             cl = alert_days(mask)
             r = score(cl, tr_tune, len(df))
             if r is None or r["n_alerts"]==0: continue

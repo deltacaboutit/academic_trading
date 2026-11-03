@@ -35,14 +35,17 @@ def market_features(corr_win=60, vmaw=50):
     spy = spy.reindex(dates); vix = vix.reindex(dates)
     r = np.log(spy/spy.shift(1))
     # correlation proxy: index var / mean stock var over corr_win
-    idx_var = r.rolling(corr_win).var()
-    stock_var = pd.DataFrame(Rs, index=dates).rolling(corr_win).var()
-    avg_stock_var = stock_var.mean(axis=1)
-    corr = (idx_var / avg_stock_var).clip(0, 1)
+    Rs_df = pd.DataFrame(Rs, index=dates)
+    def corr_proxy(win):
+        return (r.rolling(win).var() / Rs_df.rolling(win).var().mean(axis=1)).clip(0, 1)
+    corr = corr_proxy(corr_win)
     df = pd.DataFrame(index=dates)
     df["px"] = spy; df["ret"] = r; df["vix"] = vix
     df["vspike"] = vix / vix.rolling(vmaw).mean()
     df["corr"] = corr
+    # fast (20-day) correlation proxy: confirms systemic stress during fast crashes
+    # (the 60-day proxy was one hundredth short at the 2025-04-08 low; see PHASE3_FINDINGS)
+    df["corr20"] = corr_proxy(20)
     df["dd"] = (spy/spy.cummax() - 1)
     df["ext"] = spy/spy.rolling(200).mean() - 1
     df["dvix"] = vix.diff()

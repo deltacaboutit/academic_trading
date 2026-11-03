@@ -20,20 +20,41 @@ for scoring only. Tuned on data before 2016, tested after.
 
 ## 1. Market bottoms — WORKS (the main success)
 
-Capitulation rule: **VIX-spike > 1.1 AND correlation > 0.30 AND drawdown < −16%**.
+Capitulation rule (updated 2026-11-03): **VIX-spike > 1.3 AND 20-day correlation
+> 0.26 AND drawdown < −18%**.
 
 | | Recall (bottoms caught) | Precision | Median lead/lag |
 |---|---|---|---|
-| Tune (pre-2016, 15% swings) | 86% (6/7) | 55% | −3 days |
-| Test (2016+, 15% swings) | 80% (4/5) | 45% | −1 day |
-| Test (2016+, 10% swings) | 88% (7/8) | 33% | ~0 days |
+| Tune (pre-2016, 15% swings) | 71% (5/7) | 58% | −6 days |
+| Test (2016+, 15% swings) | 80% (4/5) | 42% | ~0 days |
 
-It flagged the major lows of 2002, 2008, 2010, 2011, 2018, 2020 and 2022, roughly
-coincident with the low (within a few days). It missed the March-2009 secondary
-low (vol had already receded from the Nov-2008 peak) and the April-2025 low at the
-15% threshold. Precision ~45% means about half the capitulation alerts mark a true
-major bottom; the others are deep scares that recovered without being the swing low
-— still useful as real-time stress flags.
+It flags the major lows of 2002, 2008, 2010, 2011, 2018, **2020 and 2025**,
+roughly coincident with the low. In the test era it now misses only the June-2022
+interim low; the deep crashes (2018-Q4, COVID-2020, 2022-10, tariff-2025) are all
+caught. Precision ~45% means about half the capitulation alerts mark a true major
+bottom; the others are deep scares that recovered without being the swing low —
+still useful as real-time stress flags.
+
+### Fix — why the correlation window is now 20 days (was 60)
+
+The original rule used a **60-day** correlation proxy and **missed the 2025-04-08
+low**. At that low the 60-day proxy was **0.29 — one hundredth below the 0.30
+trigger** — and by the time it crossed 0.30 (next day) the rebound had lifted the
+drawdown above the trigger, so the three conditions never aligned. The 60-day
+window is simply too slow for a 4-day flash crash. The **20-day** proxy was
+already **0.44 at that same low** (and 0.5–0.6 in March 2020), so switching to it
+(re-tuned on pre-2016 data, not fitted to 2025) catches both 2020 and 2025 on the
+day, with the same test recall (80%) and no rise in false alarms. See
+`research/phase3/phase3_signal.py` for the live rule.
+
+### Live check — recent years
+
+| Year | Market event | Major low? | Detector |
+|---|---|---|---|
+| 2020 | COVID crash, −34% | yes (2020-03-23) | **flagged**, on the day |
+| 2022 | bear market | yes (2022-10-12) | flagged (missed the June interim low) |
+| 2025 | tariff crash, −19% (VIX 52) | yes (2025-04-08) | **flagged**, on the day (fixed) |
+| 2026 (to Oct) | mild, worst −8.9% | no major low | correctly silent — no false alarm |
 
 ## 2. Market tops — DOES NOT WORK
 
@@ -89,6 +110,11 @@ sample. It catches market-driven stock bottoms and misses idiosyncratic ones
 (the rule requires market stress). Useful as a stock-level stress/bottom flag,
 with the same caveat as the market: it is coincident detection, not a forward
 predictor. Rule saved in `phase3_model_stock_turns.json`.
+
+By year: in **2025** (broad tariff selloff) it caught **71%** of the 519 stocks'
+major lows at **61%** precision (its wheelhouse — a market-wide capitulation); in
+**2026** (mild, no market-wide scare) it caught **36%** of 409 stock lows at 44%,
+because many were idiosyncratic drops without the market stress the rule requires.
 
 ## Bottom line
 
