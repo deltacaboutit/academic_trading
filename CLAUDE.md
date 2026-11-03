@@ -52,3 +52,11 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   elsewhere) modestly beats the market-wide VIX overlay on drawdown (market −51%
   B&H → −35% tune / −13% test at W=100) while keeping slightly more return, but
   still roughly halves return vs buy-and-hold. A risk dial, research only.
+- **Phase 3: correlation-to-volatility model** (`research/phase3/`, findings in
+  `results/sentiment_tuning/PHASE3_FINDINGS.md`): a composite of a realized-
+  correlation proxy + VIX spike + drawdown + extension (a different indicator from
+  Phase 1). Good COINCIDENT detector of major market bottoms/stress (~80–90% of
+  major lows caught out of sample) but CANNOT call tops and does NOT predict
+  forward returns (high-stress days are often followed by rebounds). Per-stock
+  capitulation flips sign by era (unreliable). `research/phase3/phase3_signal.py`
+  prints the current reading. Research only, not wired into the rating engine.
