@@ -47,6 +47,37 @@ already **0.44 at that same low** (and 0.5–0.6 in March 2020), so switching to
 day, with the same test recall (80%) and no rise in false alarms. See
 `research/phase3/phase3_signal.py` for the live rule.
 
+### Drawdown-gate sensitivity and presets (2010→now)
+
+"Major" vs "ordinary" lows are defined by a ZigZag swing filter: a 15%-swing low
+is a drop of ≥15% that then recovered ≥15% (a major bottom); a 10%-swing low only
+needs a ≥10% reversal (ordinary correction). Since 2010 there are **7** major
+(15%) lows — 2010-07, 2011-10, 2018-12, 2020-03, 2022-06, 2022-10, 2025-04 — and
+**11** at the 10% bar (those plus 2015-08, 2016-02, 2018-02, 2022-03). Recall is
+the share of those lows flagged (±25 trading days); precision is the share of the
+detector's alert clusters that land on a real low.
+
+Holding vol-spike>1.3 and 20-day correlation>0.26 fixed, varying only the
+drawdown gate, over 2010→now:
+
+| drawdown gate | vs 15% major lows (2010-now / 2016+ test) | vs 10% corrections (2010-now / 2016+ test) |
+|---|---|---|
+| −18% (**preset `major`**) | 86% r / 100% p · 80% / 100% | 55% / 100% · 50% / 100% |
+| −14% | 86% / 92% · 80% / 86% | 55% / 92% · 50% / 86% |
+| −10% (**preset `correction`**) | 86% / 53% · 80% / 50% | **91% / 84% · 88% / 90%** |
+| −8% | 86% / 48% · 80% / 42% | 91% / 71% · 88% / 67% |
+| −6% | 86% / 40% · 80% / 33% | 91% / 64% · 88% / 60% |
+
+The drawdown gate is a "what size dip to catch" dial, and the conclusion is the
+same with or without 2008/2002:
+- **`major` (−18%)**: major crashes only, ~86% recall at ~100% precision.
+- **`correction` (−10%)**: also ordinary ~10% pullbacks, ~91% recall / ~84%
+  precision — the sweet spot for corrections. −8% adds no recall over −10% but
+  is noticeably noisier, so it is not recommended.
+
+These two presets are selectable in `research/phase3/phase3_signal.py`
+(`phase3_signal.py major` / `correction`; default shows both).
+
 ### Live check — recent years
 
 | Year | Market event | Major low? | Detector |

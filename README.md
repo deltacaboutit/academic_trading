@@ -169,6 +169,8 @@ The inbox appears after the first nightly sync run. On your own computer, the sa
 
 **Tuning the Squeeze Play II-A thresholds.** The entry threshold, exit threshold and price-trigger days (for longs and shorts separately) are settings, not fixed numbers — see `sp2a_entry`, `sp2a_exit`, `sp2a_trig_long` and `sp2a_trig_short` in `atrade/config.py`. A time-split tuning study (tune on the earlier years, test on the later years, across all S&P 500 stocks, costs included) is written up in **`results/sentiment_tuning/FINDINGS.md`**, with the full results tables alongside it. Its short version: on the long-history market-wide sentiment sources (the VIX and the Cboe equity put/call ratio), **no setting beat buy-and-hold, in or out of sample** — so the extended system built from that study is off by default and does not vote.
 
+**Volatility regime & bottom detector (research, `research/phase3/`).** A separate exploration — not wired into the rating engine — detects market stress and capitulation bottoms from a *correlation-to-volatility* composite (a cross-stock correlation proxy + a VIX spike + drawdown). Written up in **`results/sentiment_tuning/PHASE3_FINDINGS.md`**. In short: it is a good *coincident* detector of major market bottoms — it flags the 2018, 2020, 2022 and 2025 crashes on the day — but it **cannot call tops** and does **not** predict forward returns, so treat it as a risk/alert tool, not a buy/sell timer. Run `python research/phase3/phase3_signal.py` for the current reading. The bottom detector has two presets: **`major`** (drawdown < −18%; major crashes only, ~86% recall at ~100% precision since 2010) and **`correction`** (drawdown < −10%; also ordinary ~10% pullbacks, ~91% recall / ~84% precision).
+
 ### GEX (gamma exposure) — an add-on, not from the books
 
 The tool draws the **gamma flip, call wall and put wall** on the chart, and shows them on the Rating tab.
@@ -354,7 +356,8 @@ atrade/                    the analysis engine, one file per framework
 options_data/              daily options summary + sync bookkeeping (full chains are on the Release; see section 3)
 .github/workflows/         options_collect.yml (daily collection), options_sync.yml (temporary Watchtower backup), options_import.yml, research.yml
 results/                   research results (bootstrap per stock, summaries, tuned weights)
-  sentiment_tuning/        Framework 6 tuning study: FINDINGS.md + all-combination and per-stock tables
+  sentiment_tuning/        Framework 6 tuning + volatility studies: FINDINGS.md, REGIME/SECTOR/PHASE3 write-ups and tables
+research/phase3/           volatility regime & bottom detector (correlation-to-volatility; phase3_signal.py for the current reading)
 price_data/                25 years of daily prices per stock (test and validation data)
 tests/                     formula, look-ahead, data-store and GEX checks
 data/                      created on first run: saved prices and settings (not uploaded)
