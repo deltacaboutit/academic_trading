@@ -47,6 +47,42 @@ A program that runs on your own Windows computer and opens in your web browser. 
 | Data quality | What the cleaning step found and changed. |
 | Settings | Weights, cut-offs, filters, costs and more. Values are saved in `data\settings.json`. |
 | Pattern guide | Every chart pattern with a made-up textbook example (drawn from what the tool's own rules find in it), what it looks like and may mean, the tool's exact rule, its target, the statuses, and a glossary of the words used. |
+| Forward | Three experimental forward-looking indicators — **top risk**, **bottom chance** and **trend continuation** — each as a probability next to its normal (base) rate, with the clues behind it; a pressure gauge; an expected ~20-day price range from options-implied volatility; key option levels; and a full correlation read-out (the stock's sector, how it tracks its sector and the market, which sectors are strong, and how joined-up the sectors are). See *Forward-looking indicators* below. |
+
+## 2a. Forward-looking indicators (the Forward tab)
+
+These three indicators are **new and separate from the official Buy/Sell/Hold rating**. Where the rating scores
+today's evidence, these estimate what is likely to happen *next*. They answer three questions for the latest day:
+
+- **Is this a top?** (a high the price falls away from)
+- **Is this a bottom?** (a low the price climbs away from)
+- **Will the current up- or down-trend continue, reverse, or stall** over the next few weeks?
+
+**How they are built.** Each past day is first labelled from what happened *after* it, using the stock's own normal
+daily swing (its ATR) so the same rule fits a calm utility and a jumpy chip maker. A top is a local high followed by a
+fall of at least 2 ATRs; a bottom is the mirror; trend continuation uses a triple-barrier test (which 2-ATR move comes
+first — with the trend, against it, or neither). About 29 clues per day are then measured — how stretched price is from
+its averages, RSI and Bollinger position, momentum divergence, volume climaxes and the volume point of control, options
+levels (call/put walls, gamma flip, put/call ratios, implied volatility, VIX), and sector/market relative strength and
+correlation — each standardised using only its own past so nothing peeks ahead. A logistic regression (a standard
+method that weighs the clues into a probability) is trained **pooled across many stocks**, because real tops and bottoms
+are rare, and tested **walk-forward** (trained on early years, judged on later years it never saw).
+
+**How well they work (walk-forward, ~200 stocks).** The top and bottom models reach an AUC near **0.87–0.90** and, when
+they fire, flag real tops/bottoms about **5–7× more often than the base rate**. The **trend-continuation model shows
+almost no edge** (AUC ≈ 0.52) — honestly reported, and in line with the research finding that trend continuation is very
+hard to predict. The options clues are a thin, best-effort layer today because only a few months of options history
+exist; they will strengthen as more is collected. **This is a research tool, not financial advice.**
+
+**Training the models.** The app loads the saved models from `results/forward_*.json`. To rebuild them:
+
+```
+ATRADE_OFFLINE=1 python -m atrade.forward_backtest --save          # all history, prints the scorecard, saves models
+ATRADE_OFFLINE=1 python -m atrade.forward_backtest --limit 40      # quick scorecard on 40 stocks, no save
+```
+
+The sector ETFs used for the correlation layer (XLK, XLF, XLV, …) live in `price_data/` like the other prices;
+`python -m atrade.download_prices --tickers XLK XLF XLV XLY XLP XLE XLI XLB XLRE XLU XLC` refreshes them.
 
 ## 2b. Putting the tool online for free (Streamlit Community Cloud)
 

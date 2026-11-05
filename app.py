@@ -73,6 +73,14 @@ def cached_market_stress():
         return None
 
 
+@st.cache_data(show_spinner=False, ttl=6 * 3600)
+def cached_forward(ticker: str, day: str, refresh_token: int):
+    """Forward-looking estimate (tops / bottoms / continuation + correlation).
+    Daily bars only; kept out of the main analysis so the Rating tab stays fast."""
+    from atrade import forward as FW
+    return FW.forward_estimate(ticker, dict(S), refresh=refresh_token > 0)
+
+
 def run(ticker, refresh=False, bar="day", upload=None):
     tok = int(dt.datetime.now().timestamp()) if refresh else 0
     with st.spinner(f"Analysing {ticker} ..."):
@@ -187,7 +195,8 @@ if not res["quality"]["passed"]:
              f"{res['quality']['worst_year']} (limit 5%). Treat this rating with extra caution.")
 
 tabs = st.tabs(["Rating", "Chart", "Signals", "Back-test", "Validation", "LMW", "Similarity", "Watch list",
-                "All stocks", "Options data", "Data quality", "Settings", "How it works", "Pattern guide"])
+                "All stocks", "Options data", "Data quality", "Settings", "How it works", "Pattern guide",
+                "Forward"])
 
 # =============================================================== RATING ====
 with tabs[0]:
@@ -1172,4 +1181,166 @@ with tabs[13]:
     st.subheader("Words used")
     for term, text in GLOSSARY:
         st.markdown(f"**{term}.** {text}")
+    st.info(DISCLAIMER)
+
+
+# ============================================================== FORWARD ====
+with tabs[14]:
+    st.subheader("Forward-looking estimate")
+    st.caption("Three experimental indicators — **top risk**, **bottom chance** and **trend continuation** — "
+               "plus a correlation read-out and an expected price range. These are statistical odds, not "
+               "certainty, and are separate from the official Buy/Sell/Hold rating. They use daily bars.")
+    if bar != "day":
+        st.info("The forward estimate always uses daily bars; the weekly/hourly setting does not apply here.")
+
+    def _p(x, d=0):
+        return "–" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x * 100:.{d}f}%"
+
+    try:
+        est = cached_forward(res["ticker"], dt.date.today().isoformat(), int(bool(refresh)))
+    except Exception as e:
+        est = None
+        st.error(f"Could not build the forward estimate: {e}")
+
+    if est is not None:
+        avail = est["models_available"]
+        if not any(avail.values()):
+            st.warning("The trained models are not installed yet, so only the pressure gauge and the expected "
+                       "range are shown. To train them, run  `python -m atrade.forward_backtest --save`  "
+                       "(this creates results/forward_*.json).")
+
+        state_name = {1: "an uptrend", -1: "a downtrend", 0: "sideways"}[est["trend_state"]]
+        st.markdown(f"**{est['ticker']}** · close **{est['close']:.2f}** on {est['asof']} · currently in **{state_name}**")
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            tp = est["top"]
+            lift = f"{tp['lift']:.1f}× normal" if np.isfinite(tp.get("lift", np.nan)) else ""
+            st.metric("Top risk (next ~20 days)", _p(tp["prob"]), lift, delta_color="off")
+            if np.isfinite(tp.get("base_rate", np.nan)):
+                st.caption(f"Normal rate: {_p(tp['base_rate'], 1)}")
+            for r in tp["reasons"]:
+                st.markdown(f"<span class='small-note'>• {r['label']}</span>", unsafe_allow_html=True)
+        with c2:
+            bp = est["bottom"]
+            lift = f"{bp['lift']:.1f}× normal" if np.isfinite(bp.get("lift", np.nan)) else ""
+            st.metric("Bottom chance (next ~20 days)", _p(bp["prob"]), lift, delta_color="off")
+            if np.isfinite(bp.get("base_rate", np.nan)):
+                st.caption(f"Normal rate: {_p(bp['base_rate'], 1)}")
+            for r in bp["reasons"]:
+                st.markdown(f"<span class='small-note'>• {r['label']}</span>", unsafe_allow_html=True)
+        with c3:
+            cont = est["continuation"]
+            if "continue" in cont:
+                st.metric("Trend continues", _p(cont["continue"]))
+                st.caption(f"Reverses {_p(cont['reverse'])} · stalls {_p(cont['stall'])}")
+                st.markdown("<span class='small-note'>⚠ This indicator is weak — close to a coin flip in testing. "
+                            "Treat it as background only.</span>", unsafe_allow_html=True)
+            else:
+                st.metric("Trend continues", "–")
+                st.caption("No clear up/down trend to judge, or model not installed.")
+
+        # pressure gauge + expected range
+        g1, g2 = st.columns([1, 1])
+        with g1:
+            gauge = est["gauge"]
+            if np.isfinite(gauge):
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number", value=gauge,
+                    title={"text": "Pressure gauge<br><span style='font-size:12px;color:#6e7781'>"
+                                   "0 = bottom-like · 50 = neutral · 100 = top-like</span>"},
+                    gauge={"axis": {"range": [0, 100]},
+                           "bar": {"color": BLUE},
+                           "steps": [{"range": [0, 35], "color": "#d7f0dd"},
+                                     {"range": [35, 65], "color": "#f0f2f4"},
+                                     {"range": [65, 100], "color": "#fbdcdf"}]}))
+                fig.update_layout(height=260, margin=dict(l=20, r=20, t=60, b=10))
+                st.plotly_chart(fig, key="fwd_gauge")
+        with g2:
+            r = est["expected_range"]
+            st.markdown("**Expected range (next ~20 trading days)**")
+            if np.isfinite(r.get("low", np.nan)):
+                st.markdown(f"<div style='font-size:26px;font-weight:700'>{r['low']:.2f} &nbsp;–&nbsp; {r['high']:.2f}</div>",
+                            unsafe_allow_html=True)
+                st.caption(f"About one standard deviation (±{r['sigma_pct']*100:.1f}%), from {r['source']}. "
+                           f"Centred on {r['close']:.2f}.")
+            else:
+                st.caption("Not enough data for a range.")
+            if est["key_levels"]:
+                st.markdown("**Key levels**")
+                lvl = pd.DataFrame([{"level": k.replace("_", " ").title(), "price": f"{v:.2f}"}
+                                    for k, v in est["key_levels"].items()])
+                st.dataframe(lvl, hide_index=True, width="stretch")
+
+        # ---- correlation analysis ----
+        st.markdown("---")
+        st.subheader("Correlation analysis")
+        cr = est["correlation"]
+        sec = cr["sector"]
+        if sec.get("etf"):
+            rank = ", ".join(f"{s} {c:.2f}" for s, c in sec["ranking"][:3])
+            st.markdown(f"**Sector (chosen by correlation):** {sec['name']} — tracked by **{sec['etf']}** "
+                        f"(correlation {sec['corr']:.2f}). Closest matches: {rank}.")
+            if len(sec["ranking"]) > 1 and (sec["ranking"][0][1] - sec["ranking"][1][1]) < 0.05:
+                st.caption("The top two are close, so the sector match is genuinely ambiguous "
+                           "(common for large stocks that move with the whole market).")
+
+        k1, k2 = st.columns(2)
+        with k1:
+            cs, cm = cr.get("corr_sector"), cr.get("corr_market")
+            if cs:
+                st.markdown(f"**Tracks its sector:** now {cs['now']:.2f}, a year ago "
+                            f"{cs['year_ago']:.2f}" + (" (loosening)" if np.isfinite(cs['year_ago']) and cs['now'] < cs['year_ago'] - 0.1 else ""))
+            if cm:
+                st.markdown(f"**Tracks the market:** now {cm['now']:.2f}, a year ago {cm['year_ago']:.2f}")
+        with k2:
+            rss, rsm = cr.get("rs_sector"), cr.get("rs_market")
+            if rss is not None and np.isfinite(rss):
+                st.markdown(f"**Vs its sector (63d):** {'leading' if rss > 0 else 'lagging'} by {abs(rss)*100:.1f}%")
+            if rsm is not None and np.isfinite(rsm):
+                st.markdown(f"**Vs the market (63d):** {'leading' if rsm > 0 else 'lagging'} by {abs(rsm)*100:.1f}%")
+            mb = cr.get("market_breadth", {})
+            if mb.get("n"):
+                st.markdown(f"**Market breadth:** {mb['above_ma50']*100:.0f}% of sectors above their 50-day "
+                            f"average, {mb['above_ma200']*100:.0f}% above their 200-day.")
+
+        sm = cr.get("sector_momentum")
+        if sm is not None and len(sm):
+            st.markdown("**Which sectors are strong now** (63-day return, strongest first)")
+            show = sm[["rank", "sector", "etf", "return_w", "above_ma200"]].copy()
+            show["return_w"] = (show["return_w"] * 100).round(1).astype(str) + "%"
+            show["above_ma200"] = (show["above_ma200"] * 100).round(1).astype(str) + "%"
+            show.columns = ["Rank", "Sector", "ETF", "63-day return", "vs 200-day avg"]
+            st.dataframe(show, hide_index=True, width="stretch")
+
+        cm_ = cr.get("sector_corr_matrix")
+        if cm_ is not None and len(cm_):
+            avg_off = (cm_.values[np.triu_indices_from(cm_.values, 1)]).mean()
+            st.markdown(f"**How joined-up the sectors are** (average pair correlation {avg_off:.2f} — "
+                        f"{'high: sectors moving as one, little diversification' if avg_off > 0.6 else 'moderate/low: sectors rotating'})")
+            hm = go.Figure(go.Heatmap(z=cm_.values, x=list(cm_.columns), y=list(cm_.index),
+                                      zmin=-1, zmax=1, colorscale="RdBu_r",
+                                      colorbar=dict(title="corr")))
+            hm.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10))
+            st.plotly_chart(hm, key="fwd_sector_corr")
+
+        with st.expander("How these indicators are built and tested"):
+            st.markdown(
+                "**Labels.** Each past day is marked a top or bottom if it was a local extreme followed by a move "
+                "of at least 2 ATRs (the stock's own normal daily swing). Trend continuation uses a triple-barrier "
+                "test: from each day, which happens first over the next 20 days — a 2-ATR move with the trend "
+                "(continues), against it (reverses), or neither (stalls).\n\n"
+                "**Clues.** About 29 clues per day: how stretched price is from its averages, RSI and Bollinger "
+                "position, momentum divergence, volume climaxes and the volume point of control, options levels "
+                "(call/put walls, gamma flip, put-call ratios, implied volatility, VIX), and sector/market "
+                "relative strength and correlation. Each is standardised using only its own past, so nothing peeks "
+                "ahead.\n\n"
+                "**Models.** A logistic regression (a standard method that weighs the clues into a probability) is "
+                "trained pooled across many stocks, because real tops and bottoms are rare. It is tested "
+                "walk-forward (train on the early years, test on later years the model never saw). In that test the "
+                "top and bottom models reached an AUC near 0.86–0.91 and fired 5–8× more often on real tops/bottoms "
+                "than the base rate; the continuation model showed almost no edge, which matches the research "
+                "finding that trend-continuation is very hard to predict.\n\n"
+                "**Options history is short** (a few months), so the options clues are a thin, best-effort layer "
+                "today and will strengthen as more data is collected. This is a research tool, not financial advice.")
     st.info(DISCLAIMER)

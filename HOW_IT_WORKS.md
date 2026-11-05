@@ -15,6 +15,28 @@ Each time you analyse a stock, the tool runs the frameworks from your design doc
 | | 8. Trade plan | Every signal enters at the next day's open. Pattern trades exit at the price target, the time limit or a stop-loss (2 closes back across the broken line, or a 4% loss), whichever comes first. |
 | Prove it | 9. Back-test | Tests every rule in time order (training, validation and final test), compares it with buy-and-hold after trading costs, and reports hit rates. |
 
+### Forward-looking indicators (the Forward tab)
+
+Separate from the Buy/Sell/Hold rating, three new indicators estimate what happens *next* for the latest day:
+
+| Indicator | Question | How it is judged |
+| --- | --- | --- |
+| Top risk | Is today a high the price falls away from? | A past day is a "top" if it is a local high followed by a drop of at least 2 ATRs (the stock's own normal daily swing). |
+| Bottom chance | Is today a low the price climbs away from? | The mirror image of a top. |
+| Trend continuation | Will the current up/down trend continue, reverse or stall over ~20 days? | A triple-barrier test: which 2-ATR move comes first — with the trend (continues), against it (reverses) or neither (stalls). |
+
+About 29 clues are measured each day (stretch from averages, RSI, Bollinger, momentum divergence, volume climaxes and
+the volume point of control, options levels such as the call/put walls, gamma flip, put/call ratios, implied volatility
+and VIX, and sector/market relative strength and correlation). Every clue is standardised using only its own past, so
+none of them peeks at the future. A **logistic regression** (a standard method that turns several clues into one
+probability) is trained **across many stocks at once**, because real tops and bottoms are rare, and tested
+**walk-forward** — trained on early years and judged on later years it never saw. In that test the top and bottom models
+were right far more often than chance (about 5–7× the base rate); the trend-continuation model was close to a coin
+flip, which the tab says plainly. A **pressure gauge** (0 = bottom-like, 100 = top-like) needs no training and is always
+shown. The **expected range** comes from the options market's implied volatility (or recent volatility when options are
+missing). The **correlation analysis** picks each stock's sector by which sector fund it tracks most closely, then shows
+how tightly it follows that sector and the market, which sectors are strong, and how joined-up the sectors are.
+
 ### Words used in the app
 
 The **Pattern guide** tab explains every chart pattern with a textbook example, and has a longer glossary. The Rating tab has a **summary in plain English**, and the Signals tab can **explain any pattern** it found.
