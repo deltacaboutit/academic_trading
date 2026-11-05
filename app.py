@@ -63,6 +63,16 @@ def cached_analyze_csv(content: bytes, name: str, settings_json: str, bar: str):
     return out
 
 
+@st.cache_data(show_spinner=False, ttl=6 * 3600)
+def cached_market_stress():
+    """Market-wide stress / capitulation reading (Phase 3). Context only, no vote."""
+    try:
+        from atrade.regime import market_stress
+        return market_stress()
+    except Exception:
+        return None
+
+
 def run(ticker, refresh=False, bar="day", upload=None):
     tok = int(dt.datetime.now().timestamp()) if refresh else 0
     with st.spinner(f"Analysing {ticker} ..."):
@@ -272,6 +282,30 @@ with tabs[0]:
         g1.metric("Put wall", lvl("put_wall_price")); g2.metric("Gamma flip", lvl("gex_flip")); g3.metric("Call wall", lvl("call_wall_price"))
         st.caption(f"Levels from {df.index[k]:%d %b %Y}; % is the distance from today's close. GEX is not in either book, so it "
                    "has no vote in the rating; its signals are tested on the Back-test tab (rules starting with [GEX]).")
+
+    ms = cached_market_stress()
+    if ms is not None:
+        st.subheader("Market stress / capitulation — information only")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("VIX", f"{ms['vix']:.1f}")
+        m2.metric("Vol spike (VIX ÷ 50-day)", f"{ms['vspike']:.2f}")
+        m3.metric("Stock correlation (20-day)", f"{ms['corr20']:.2f}")
+        m4.metric("S&P 500 drawdown", f"{100 * ms['dd']:.1f}%")
+        if ms["flags"]["major"]:
+            st.error("**Capitulation — a possible MAJOR market bottom is forming.** Volatility and cross-stock "
+                     "correlation are spiking together inside a deep drawdown.")
+        elif ms["flags"]["correction"]:
+            st.warning("**Capitulation — a possible bottom of a ~10% correction.**")
+        elif ms["stress"]:
+            st.warning("**Elevated market stress (risk-off).** Volatility and correlation are both high, "
+                       "but not (yet) a capitulation bottom.")
+        else:
+            st.success("**Calm market (risk-on).** No market-wide stress or capitulation signal.")
+        st.caption(f"Market-wide reading as of {ms['as_of']:%d %b %Y}, from {ms['n_stocks']} S&P 500 stocks and the VIX "
+                   "(the 'correlation to volatility' model). It is a *coincident* detector of stress and major "
+                   "bottoms — it flags crashes on the day — but it is **not** a top-caller and **not** a buy/sell timer "
+                   "(stressed days are often followed by rebounds), so, like the GEX add-on, it has **no vote in the "
+                   "rating**. Details: results/sentiment_tuning/PHASE3_FINDINGS.md.")
 
     st.subheader("Why — signals counting today")
     rows = []

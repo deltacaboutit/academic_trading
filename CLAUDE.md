@@ -60,4 +60,6 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   60-day one missed the fast 2025-04-08 low by 0.01) but CANNOT call tops and does NOT predict
   forward returns (high-stress days are often followed by rebounds). Per-stock
   capitulation flips sign by era (unreliable). `research/phase3/phase3_signal.py`
-  prints the current reading. Research only, not wired into the rating engine.
+  prints the current reading. Surfaced in the app on the Rating tab as an
+  **information-only "Market stress / capitulation" card (no vote in the rating**,
+  same status as GEX), computed by `atrade/regime.py` from price_data + the VIX.
