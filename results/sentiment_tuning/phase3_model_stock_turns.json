@@ -1,0 +1,30 @@
+{
+  "kind": "stock_bottom_detection",
+  "zigzag_pct": 0.2,
+  "window_days": 25,
+  "rule": {
+    "stock_vspike_gt": 1.4,
+    "dd_lt": -0.2,
+    "mkt_vspike_gt": 1.0
+  },
+  "tune": {
+    "a": 1.4,
+    "d": -0.2,
+    "m": 1.0,
+    "recall": 0.48848684210526316,
+    "precision": 0.5324104592397275,
+    "n_turns": 5472,
+    "n_alerts": 4551,
+    "median_leadlag": -1.0
+  },
+  "test": {
+    "a": 1.4,
+    "d": -0.2,
+    "m": 1.0,
+    "recall": 0.5181937746602368,
+    "precision": 0.5444086516336861,
+    "n_turns": 4562,
+    "n_alerts": 4346,
+    "median_leadlag": 0.0
+  }
+}

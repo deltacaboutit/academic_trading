@@ -65,8 +65,29 @@ DEFAULTS: dict = {
     "use_volume_weights": True,
     # ---- Framework 6: sentiment ------------------------------------------
     "sp2_extreme": 5.0, "sp2_lookback": 10,
+    # Squeeze Play II-A entry/exit thresholds and price-trigger days.
+    # These used to be a single number (sp2_extreme) and a hard-coded 3-day
+    # trigger. They are now separate so entry vs exit, and long vs short, can
+    # be set independently. The defaults below reproduce the original
+    # behaviour exactly (entry = exit = 5.0, both triggers = 3 days).
+    "sp2a_entry": 5.0,            # fear/greed oscillator level needed to ENTER
+    "sp2a_exit": 5.0,            # opposite-extreme level that EXITS the trade
+    "sp2a_trig_long": 3,          # price-trigger days for LONG entries (close > prior N-day high)
+    "sp2a_trig_short": 3,         # price-trigger days for SHORT entries (close < prior N-day low)
     "sp2a_max_loss": 0.10, "sp2a_trail_giveback": 0.50, "sp2a_trail_delay": 9,
     "sp2b_hold": 30,
+    # Extended Squeeze Play II-A on long-history, market-wide sentiment
+    # (the VIX, and the Cboe equity put/call ratio), added so the strategy can
+    # be studied over 13-25 years instead of the ~5 months of per-stock options
+    # data. The values below are the LEAST-BAD, most stable settings found by a
+    # time-split tune/test sweep over all S&P 500 stocks (see
+    # results/sentiment_tuning/). IMPORTANT: even at these settings the system
+    # UNDERPERFORMS buy-and-hold in every period tested, so it is OFF by default
+    # and, when on, votes as a back-test-only "benchmark" rather than a live
+    # Buy/Sell signal. Turn it on only to experiment.
+    "sp2a_extended_enable": False,
+    "sp2a_vix_entry": 10.0, "sp2a_vix_exit": 2.0, "sp2a_vix_trig_long": 1, "sp2a_vix_trig_short": 10,
+    "sp2a_pc_entry": 5.0,  "sp2a_pc_exit": 2.0,  "sp2a_pc_trig_long": 1,  "sp2a_pc_trig_short": 10,
     "vix_osc": [50, 100],             # framework allows 21/50 or 50/100
     "vix_trigger_days": 5,
     "tsunami_level": 10.0, "tsunami_hold": 30,

@@ -52,10 +52,27 @@ def squeeze_play_1(osc5, osc21, high, low, close, name, s):
     return sigs
 
 
-def squeeze_play_2a(osc, open_, high, low, close, name, s):
-    n = len(close); lb = int(s["sp2_lookback"]); X = float(s["sp2_extreme"])
+def squeeze_play_2a(osc, open_, high, low, close, name, s,
+                    entry_X=None, exit_X=None, trig_long=None, trig_short=None):
+    """Contrarian Squeeze Play II-A.
+
+    Enter LONG when sentiment reaches a fear extreme (oscillator above
+    +entry_X within the look-back window) AND price confirms with a close above
+    the prior `trig_long`-day high; enter SHORT on the mirror image. Exit at the
+    opposite sentiment extreme (+/- exit_X), or on the fixed stops (max loss /
+    trailing giveback, which are NOT tuned here).
+
+    entry_X / exit_X / trig_long / trig_short default to the config settings
+    (sp2a_entry, sp2a_exit, sp2a_trig_long, sp2a_trig_short). They are separate
+    so entry vs exit, and long vs short, can be set independently.
+    """
+    n = len(close); lb = int(s["sp2_lookback"])
+    entry_X = float(s["sp2a_entry"]) if entry_X is None else float(entry_X)
+    exit_X = float(s["sp2a_exit"]) if exit_X is None else float(exit_X)
+    trig_long = int(s["sp2a_trig_long"]) if trig_long is None else int(trig_long)
+    trig_short = int(s["sp2a_trig_short"]) if trig_short is None else int(trig_short)
     pos = 0; sigs = []; cur = None; entry = None; peak = 0.0; start = 0
-    for t in range(max(lb, 3), n):
+    for t in range(max(lb, trig_long, trig_short, 3), n):
         if not _valid(osc, t):
             continue
         win = osc[t - lb + 1:t + 1]
@@ -66,7 +83,7 @@ def squeeze_play_2a(osc, open_, high, low, close, name, s):
                 prof = pos * (close[t] / entry - 1)
                 peak = max(peak, prof)
                 exit_ = False
-                if (pos == 1 and osc[t] < -X) or (pos == -1 and osc[t] > X):
+                if (pos == 1 and osc[t] < -exit_X) or (pos == -1 and osc[t] > exit_X):
                     exit_ = True                                   # opposite extreme
                 if prof <= -float(s["sp2a_max_loss"]):
                     exit_ = True                                   # 10% max loss
@@ -75,9 +92,10 @@ def squeeze_play_2a(osc, open_, high, low, close, name, s):
                 if exit_:
                     cur.live_until = t; pos = 0; cur = None
                     continue
-        hh = np.max(high[t - 3:t]); ll = np.min(low[t - 3:t])
-        long_e = win.max() > X and close[t] > hh
-        short_e = win.min() < -X and close[t] < ll
+        hh = np.max(high[t - trig_long:t]) if trig_long > 0 else -np.inf
+        ll = np.min(low[t - trig_short:t]) if trig_short > 0 else np.inf
+        long_e = win.max() > entry_X and close[t] > hh
+        short_e = win.min() < -entry_X and close[t] < ll
         for d, ok in ((1, long_e), (-1, short_e)):
             if ok and pos != d:
                 if cur is not None:
@@ -241,5 +259,29 @@ def sentiment_signals(series: dict, df, s: dict):
                                 f"Squeeze Play II-B (VIX {f}/{sl})", "the VIX", s)
         sigs += fast_vol_swing(oscillator(vx, 1, 10), n, s, "Fast volatility swing (VIX)")
     status.append({"system": "Squeeze Play II-B + fast volatility swing", "data": "VIX", "days": cnt, "needed": int(sl) + 10, "active": ok, "votes": ok})
+
+    # Extended Squeeze Play II-A on long-history, market-wide sentiment (the VIX
+    # and the Cboe equity put/call ratio). Added so the strategy can be tuned
+    # over 13-25 years. Tuned with a time-split sweep (results/sentiment_tuning):
+    # at the best settings it still LOSES to buy-and-hold in every period, so it
+    # is OFF by default and, when on, is kept out of the live Buy/Sell vote
+    # (back-tested only) unless the user explicitly re-weights it.
+    enable = bool(s.get("sp2a_extended_enable", False))
+    for key, osc_fs, params, label in (
+        ("vix", (50, 100),
+         (s["sp2a_vix_entry"], s["sp2a_vix_exit"], s["sp2a_vix_trig_long"], s["sp2a_vix_trig_short"]),
+         "Squeeze Play II-A (VIX, tuned)"),
+        ("equity_pc", (50, 100),
+         (s["sp2a_pc_entry"], s["sp2a_pc_exit"], s["sp2a_pc_trig_long"], s["sp2a_pc_trig_short"]),
+         "Squeeze Play II-A (market P/C, tuned)"),
+    ):
+        ok, cnt = have(key, 120)
+        if ok:
+            eX, xX, tl, ts = params
+            x = squeeze_play_2a(oscillator(series[key], *osc_fs), o, h, l, c, label, s,
+                                entry_X=eX, exit_X=xX, trig_long=tl, trig_short=ts)
+            sigs += x if enable else mute(x)       # non-voting unless enabled
+        status.append({"system": label, "data": f"{key} 50/100 oscillator",
+                       "days": cnt, "needed": 120, "active": ok, "votes": ok and enable})
 
     return sigs, status

@@ -167,6 +167,10 @@ The inbox appears after the first nightly sync run. On your own computer, the sa
   it; the daily collector calculates it from the chain on every other day. On the days where both exist, the two agree to within
   a few hundredths of a point. GEX levels: see *How the GEX levels are calculated* below.
 
+**Tuning the Squeeze Play II-A thresholds.** The entry threshold, exit threshold and price-trigger days (for longs and shorts separately) are settings, not fixed numbers — see `sp2a_entry`, `sp2a_exit`, `sp2a_trig_long` and `sp2a_trig_short` in `atrade/config.py`. A time-split tuning study (tune on the earlier years, test on the later years, across all S&P 500 stocks, costs included) is written up in **`results/sentiment_tuning/FINDINGS.md`**, with the full results tables alongside it. Its short version: on the long-history market-wide sentiment sources (the VIX and the Cboe equity put/call ratio), **no setting beat buy-and-hold, in or out of sample** — so the extended system built from that study is off by default and does not vote.
+
+**Market stress / capitulation card (Rating tab).** The Rating tab shows an **information-only** "Market stress / capitulation" card that detects market-wide stress and major bottoms from a *correlation-to-volatility* composite (a cross-stock correlation proxy + a VIX spike + drawdown). Like the GEX add-on it has **no vote in the rating** — it is a *coincident* detector of major bottoms (it flags the 2018, 2020, 2022 and 2025 crashes on the day) but it **cannot call tops** and does **not** predict forward returns, so it is a risk/alert tool, not a buy/sell timer. It is computed by `atrade/regime.py` from the shipped `price_data/` panel and the VIX; the full study (with out-of-sample numbers) is in **`results/sentiment_tuning/PHASE3_FINDINGS.md`**, and `research/phase3/` holds the research code. The bottom detector has two presets: **`major`** (drawdown < −18%; major crashes only, ~86% recall at ~100% precision since 2010) and **`correction`** (drawdown < −10%; also ordinary ~10% pullbacks, ~91% recall / ~84% precision); run `python research/phase3/phase3_signal.py` for the current reading from the command line.
+
 ### GEX (gamma exposure) — an add-on, not from the books
 
 The tool draws the **gamma flip, call wall and put wall** on the chart, and shows them on the Rating tab.
@@ -352,6 +356,8 @@ atrade/                    the analysis engine, one file per framework
 options_data/              daily options summary + sync bookkeeping (full chains are on the Release; see section 3)
 .github/workflows/         options_collect.yml (daily collection), options_sync.yml (temporary Watchtower backup), options_import.yml, research.yml
 results/                   research results (bootstrap per stock, summaries, tuned weights)
+  sentiment_tuning/        Framework 6 tuning + volatility studies: FINDINGS.md, REGIME/SECTOR/PHASE3 write-ups and tables
+research/phase3/           volatility regime & bottom detector (correlation-to-volatility; phase3_signal.py for the current reading)
 price_data/                25 years of daily prices per stock (test and validation data)
 tests/                     formula, look-ahead, data-store and GEX checks
 data/                      created on first run: saved prices and settings (not uploaded)
