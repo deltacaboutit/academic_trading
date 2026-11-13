@@ -12,10 +12,11 @@ name: Watchtower backup sync (temporary)
 # so this runs at 11:15 pm and again at 7:15 am New York time (UTC times below,
 # daylight-saving shift included). Each run only processes days it has not
 # seen yet, so extra runs are harmless.
+#
+# The daily schedule is switched off: the collector now covers every day since
+# 2026-10-21. Run it by hand (Actions tab -> this workflow -> Run workflow) to
+# fill a gap from Watchtower, e.g. 2026-10-20, which neither source had.
 on:
-  schedule:
-    - cron: "15 3 * * 2-6"    # 11:15 pm EDT / 10:15 pm EST, Mon-Fri evenings
-    - cron: "15 11 * * 2-6"   # 7:15 am EDT / 6:15 am EST, catch-up
   workflow_dispatch:
 
 permissions:
