@@ -297,5 +297,19 @@
   },
   "last_run": "2026-11-20T04:07-05:00",
   "minutes": 15.1
+ },
+ "2026-11-20": {
+  "stocks": 516,
+  "collected": 510,
+  "failed": {
+   "AVB": "ValueError: no price history",
+   "EA": "ValueError: no price history",
+   "EQR": "ValueError: no price history",
+   "KVUE": "ValueError: no price history",
+   "PSKY": "ValueError: no price history",
+   "WBD": "ValueError: no price history"
+  },
+  "last_run": "2026-11-20T21:13-05:00",
+  "minutes": 28.6
  }
 }
