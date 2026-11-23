@@ -99,7 +99,22 @@ Decisions the user made: open the step-0 pull request and keep stacking; statuse
 | 3 Random twins, realistic fills, variants (incl. pattern stops), statistics | `cd89793` | `atrade/twins.py`, `atrade/edge_stats.py`, `research.twin_summary`; README choice 23 |
 | 4 Weekly and hourly bars, CSV files | `288b343` | `atrade/data.py`, `atrade/cleaning.py`, sidebar; README choice 24 |
 
-Still open:
-- `confirm.PROVEN` is empty. Fill it only with checks marked HELPS in `results/summary/twins_checks.csv` after the next research run (or in PatternFinder2.5's v2.5 `summary.txt`, which uses the same check keys).
-- The random-twin tables appear on the All stocks tab after the next "Research run (all stocks)" GitHub Action.
-- PatternFinder2.5 can be archived once the user is happy, after removing its `pattern_core/__pycache__/`.
+## Update (2026-10-31): both pull requests merged, and the first research run with random twins is done
+
+**Repo state.** Pull requests #5 and #7 are both merged into `main` (merge commit `6bea085`). The working branch is now `main`. The "Research run (all stocks)" GitHub Action (run 41165327811, B=500, 20 shards) finished on 2026-10-31 and committed its results as `91d2659`. All 507 stocks ran, and `failed_stocks.csv` is empty. `python -m pytest -q tests` gives 88 passed. The All stocks tab in `app.py:822-838` reads the new `results/summary/twins_*.csv` tables.
+
+**What the random twins found.** A random twin is a trade in the same stock, in the same direction and with the same exit rules, that starts on a randomly chosen day. The "edge" is the pattern trade's average return minus its twins' average return.
+- **Overall** (`twins_overall.csv`): 50,395 trades over 289 months. The edge is −0.09% per trade (the range is −0.22% to +0.04%, p = 0.17), so there is no edge. Both halves of the period agree (−0.04% before 2016-03-30, −0.15% after), and so do bullish and bearish patterns (`twins_by_half.csv`, `twins_by_bias.csv`).
+- **By pattern** (`twins_by_pattern.csv`): no pattern's edge survives the Holm or Benjamini–Hochberg correction for testing many patterns at once. The rounding bottom and the symmetrical triangle have p = 0.03 before the correction, but neither survives it.
+- **The 21 textbook checks** (`twins_checks.csv`): **none is marked HELPS.** Two are marked **HURTS**, which means trades that passed the check did worse than trades that failed it:
+  - `relative_strength` is 0.30% worse per trade (Holm p < 0.001);
+  - `major_trend` (agrees with the 200-day trend) is 0.34% worse per trade (Holm p = 0.036).
+  - `triangle_timing` is "too few", because no trades failed it. Every other check is "no clear effect".
+- **Trade-management variants** (`twins_variants.csv`): `pattern_stop` (each pattern's own stop from the chart books) is 0.58% per trade **worse** than the book's 2-close/4% plan (p < 0.001). This supports keeping the book's plan as the default. `kr_exit` and `gap_stop` make almost no difference.
+
+**Decision this implies.** `confirm.PROVEN` (`atrade/confirm.py:150`) stays empty, because no check earned a place on it. No code was changed after the research run.
+
+## Still open
+- **Compare with PatternFinder2.5.** When the user's PatternFinder2.5 v2.5 backtest results (its `summary.txt`) come back, compare its check verdicts with `twins_checks.csv`. Both tools use the same check keys. Add a check to `PROVEN` only if it is marked HELPS. If PatternFinder2.5 agrees that no check helps, `PROVEN` stays empty.
+- **Retire PatternFinder2.5.** Once the comparison is done and the user is happy, remove PatternFinder2.5's `pattern_core/__pycache__/` and archive the repository.
+- **Optional, and not yet asked for.** One option is a README or in-app note warning that the `relative_strength` and `major_trend` checks HURT in this run. The other is the "Counts until" pyarrow warning in the app, which is still not fixed.
