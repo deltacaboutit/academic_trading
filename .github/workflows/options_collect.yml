@@ -3,15 +3,13 @@ name: Options data collection
 # Downloads every stock's option chain from Yahoo Finance after the close and adds the day to
 #   - one parquet file per stock, kept as assets of the Release "options-data"
 #   - the small daily summary in options_data/summary/ (committed to git)
-# Main run about 4:45 pm New York time. The later runs are catch-ups: each run only fetches
-# stocks that don't have the session yet, so when the main run succeeded they finish in a minute.
-# (GitHub cron times are UTC; two evening times cover both daylight-saving and standard time.)
+# Two runs: the main run after the close, and a catch-up the next morning. Each run only fetches
+# stocks that don't have the session yet, so when the main run succeeded the catch-up finishes in a minute.
+# (GitHub cron times are UTC and don't follow daylight saving; 21:45 UTC is after the close all year.)
 on:
   schedule:
-    - cron: "45 20 * * 1-5"   # 4:45 pm EDT  (3:45 pm EST: before the close, finds nothing to do)
     - cron: "45 21 * * 1-5"   # 5:45 pm EDT / 4:45 pm EST
-    - cron: "30 1 * * 2-6"    # 9:30 pm EDT / 8:30 pm EST, catch-up
-    - cron: "15 11 * * 2-6"   # 7:15 am EDT / 6:15 am EST next morning, last catch-up
+    - cron: "15 11 * * 2-6"   # 7:15 am EDT / 6:15 am EST next morning, catch-up
   workflow_dispatch:
     inputs:
       tickers:
@@ -84,8 +82,8 @@ jobs:
           done
           exit 1
 
-      # Checked only on the last catch-up (and manual runs), so a few stocks Yahoo was slow to
-      # publish at 4:45 pm don't turn the evening run red; they are fetched by the catch-ups.
+      # Checked only on the morning catch-up (and manual runs), so a few stocks Yahoo was slow to
+      # publish in the evening don't turn the evening run red; they are fetched by the catch-up.
       - name: Is the session complete? (red X if fewer than 95% of stocks were collected)
         if: always() && steps.check.outputs.todo != '0' && (github.event.schedule == '15 11 * * 2-6' || (github.event_name == 'workflow_dispatch' && inputs.tickers == ''))
         run: python -m atrade.collect_chains --check-complete
