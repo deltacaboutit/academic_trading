@@ -1,6 +1,6 @@
 # Phase 3 — correlation-to-volatility model for regimes and turns
 
-*Run 2026-11-03. Code: `research/phase3/`. Models: `phase3_model_*.json`.*
+*Run 2026-11-03. Code: `frozen_research/phase3/`. Models: `phase3_model_*.json`.*
 
 Phase 3 uses a **different indicator from Phase 1**. Phase 1 timed a cash overlay
 off the volatility *level* (VIX vs its moving average). Phase 3's core indicator
@@ -45,7 +45,7 @@ window is simply too slow for a 4-day flash crash. The **20-day** proxy was
 already **0.44 at that same low** (and 0.5–0.6 in March 2020), so switching to it
 (re-tuned on pre-2016 data, not fitted to 2025) catches both 2020 and 2025 on the
 day, with the same test recall (80%) and no rise in false alarms. See
-`research/phase3/phase3_signal.py` for the live rule.
+`frozen_research/phase3/phase3_signal.py` for the live rule.
 
 ### Drawdown-gate sensitivity and presets (2010→now)
 
@@ -75,7 +75,7 @@ same with or without 2008/2002:
   precision — the sweet spot for corrections. −8% adds no recall over −10% but
   is noticeably noisier, so it is not recommended.
 
-These two presets are selectable in `research/phase3/phase3_signal.py`
+These two presets are selectable in `frozen_research/phase3/phase3_signal.py`
 (`phase3_signal.py major` / `correction`; default shows both).
 
 ### Live check — recent years
@@ -156,4 +156,4 @@ capitulation is sometimes followed by a rebound and sometimes by more losses,
 depending on the macro regime. Used as a *risk/alert* tool it is genuinely useful;
 used as a *timing* tool it is not reliable. The tuned rules are saved in
 `phase3_model_market.json`, `phase3_model_turns.json`, `phase3_model_stocks.json`,
-and `research/phase3/phase3_signal.py` prints the current reading.
+and `frozen_research/phase3/phase3_signal.py` prints the current reading.

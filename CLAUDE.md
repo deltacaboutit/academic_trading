@@ -23,6 +23,12 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   Tune on earlier data, test on later data; never tune on the test part.
 - The tool is honest by design: both books found most technical rules do not beat
   buy-and-hold after costs. Report results that way — do not oversell.
+- **Forward indicators ship pre-trained.** The Forward tab loads fitted models
+  from `results/forward_*.json`. They are NOT retrained at runtime, so if you
+  change the features in `forward_features.py` / `forward_labels.py` the shipped
+  models drift out of sync — retrain and re-commit them:
+  `ATRADE_OFFLINE=1 python -m atrade.forward_backtest --save` (prints the
+  walk-forward scorecard; `--limit 40` for a quick no-save check). More in README §2a.
 - Run the checks with `python -m pytest tests/` (needs numpy, pandas, scipy, pyarrow).
 
 ## Research findings
@@ -52,14 +58,16 @@ books plus PatternFinder. The engine lives in `atrade/`, one file per "Framework
   elsewhere) modestly beats the market-wide VIX overlay on drawdown (market −51%
   B&H → −35% tune / −13% test at W=100) while keeping slightly more return, but
   still roughly halves return vs buy-and-hold. A risk dial, research only.
-- **Phase 3: correlation-to-volatility model** (`research/phase3/`, findings in
+- **Phase 3: correlation-to-volatility model** (frozen research in
+  `frozen_research/phase3/`, findings in
   `results/sentiment_tuning/PHASE3_FINDINGS.md`): a composite of a realized-
   correlation proxy + VIX spike + drawdown + extension (a different indicator from
   Phase 1). Good COINCIDENT detector of major market bottoms/stress (catches
   2018/2020/2022/2025 crashes on the day; uses a 20-day correlation proxy — the
   60-day one missed the fast 2025-04-08 low by 0.01) but CANNOT call tops and does NOT predict
   forward returns (high-stress days are often followed by rebounds). Per-stock
-  capitulation flips sign by era (unreliable). `research/phase3/phase3_signal.py`
-  prints the current reading. Surfaced in the app on the Rating tab as an
+  capitulation flips sign by era (unreliable). The maintained, app-facing version
+  is `atrade/regime.py` (the frozen scripts are kept only for the record).
+  Surfaced in the app on the Rating tab as an
   **information-only "Market stress / capitulation" card (no vote in the rating**,
   same status as GEX), computed by `atrade/regime.py` from price_data + the VIX.
