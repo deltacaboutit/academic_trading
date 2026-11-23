@@ -98,6 +98,9 @@ def trading_day_on_or_before(d: dt.date) -> dt.date:
 def read_label(work: Path, label: str):
     """All chains + features of one Watchtower run, with the real session date."""
     feats = pd.read_parquet(work / "data" / "features" / f"date={label}.parquet")
+    # Since 2026-10-21 Watchtower lists some stocks (e.g. BKR) twice in this file;
+    # keep one row per stock so the spot lookup below does not crash.
+    feats = feats.assign(ticker=feats["ticker"].str.upper()).drop_duplicates("ticker", keep="last")
     frames = []
     for f in sorted((work / "data" / "chains").glob(f"ticker=*/date={label}.parquet")):
         c = pd.read_parquet(f)
@@ -110,11 +113,11 @@ def read_label(work: Path, label: str):
     session = trading_day_on_or_before(last.tz_convert(NY).date()) if pd.notna(last) else \
         trading_day_on_or_before(dt.date.fromisoformat(label))
     ch["date"] = session
-    spot = feats.set_index(feats["ticker"].str.upper())["spot"]
+    spot = feats.set_index("ticker")["spot"]
     ch["spot"] = ch["ticker"].map(spot)
     ch["source"] = "watchtower"
     ch = OS.clean_iv(OS.normalize_chain(ch, "watchtower"))
-    feats = feats.assign(date=session, ticker=feats["ticker"].str.upper())
+    feats = feats.assign(date=session)
     return session, ch, feats
 
 
