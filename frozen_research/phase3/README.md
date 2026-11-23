@@ -1,5 +1,9 @@
 # Phase 3 — correlation-to-volatility model (research)
 
+> **Frozen, not maintained.** One-shot research scripts kept for the record (see
+> `../README.md`). The maintained, app-facing version of this work is
+> `atrade/regime.py`. These scripts have the repo path hard-coded.
+
 Exploratory study (not wired into the main `atrade/` engine). Detects market
 regimes and turning points from a **correlation-to-volatility composite** — the
 realized-correlation proxy (how much stocks move together) combined with the VIX
@@ -27,9 +31,9 @@ and is **not** a reliable forward-return predictor.
 ## Run
 
 ```
-python research/phase3/phase3_signal.py     # current reading
-python research/phase3/phase3.py            # features + ZigZag turns
-python research/phase3/phase3_turns.py      # re-score the tops/bottoms detector
+python frozen_research/phase3/phase3_signal.py     # current reading
+python frozen_research/phase3/phase3.py            # features + ZigZag turns
+python frozen_research/phase3/phase3_turns.py      # re-score the tops/bottoms detector
 ```
 
 Needs numpy, pandas, pyarrow, scipy and internet for VIX/price data already in
