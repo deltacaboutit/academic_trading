@@ -331,5 +331,15 @@
   "skipped": [],
   "last_run": "2026-11-24T01:15-05:00",
   "minutes": 45.0
+ },
+ "2026-11-24": {
+  "stocks": 511,
+  "collected": 510,
+  "failed": {},
+  "skipped": [
+   "KVUE"
+  ],
+  "last_run": "2026-11-24T23:50-05:00",
+  "minutes": 15.8
  }
 }
