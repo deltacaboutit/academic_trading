@@ -1,18 +1,39 @@
 """Framework 1 - data cleaning (book ch. 2: logical and statistical editing)."""
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
+_warned_no_calendar = False
+
 
 def trading_days(start, end) -> pd.DatetimeIndex:
-    """NYSE trading days if pandas_market_calendars is installed, else weekdays."""
+    """NYSE trading days if pandas_market_calendars is installed, else weekdays.
+
+    The weekday fallback counts market holidays as trading days, so the cleaner
+    will trim and interpolate slightly different rows than it would with the real
+    NYSE calendar. That is a real change to the cleaned data, not just a test
+    artefact, so warn once instead of degrading silently. pandas_market_calendars
+    is a pinned dependency (requirements.txt); install it for accurate sessions.
+    """
+    global _warned_no_calendar
     try:
         import pandas_market_calendars as mcal
         cal = mcal.get_calendar("NYSE")
         sched = cal.schedule(start_date=start, end_date=end)
         return pd.DatetimeIndex(sched.index).normalize().tz_localize(None)
     except Exception:
+        if not _warned_no_calendar:
+            warnings.warn(
+                "pandas_market_calendars is unavailable; falling back to a plain "
+                "weekday calendar that treats market holidays as trading days. "
+                "Cleaned data (which rows are trimmed or interpolated) may differ "
+                "from a run with the real NYSE calendar. Install pandas_market_calendars "
+                "(see requirements.txt) for accurate sessions.",
+                RuntimeWarning, stacklevel=2)
+            _warned_no_calendar = True
         return pd.bdate_range(start, end)
 
 

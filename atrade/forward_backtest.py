@@ -21,8 +21,13 @@ will reverse" calls were right.
 Run it from the command line to fit the final models on all available history
 and save them for the app to use::
 
-    ATRADE_OFFLINE=1 python -m atrade.forward_backtest --save
+    ATRADE_OFFLINE=1 python -m atrade.forward_backtest --save        # all stocks (full universe)
+    ATRADE_OFFLINE=1 python -m atrade.forward_backtest --limit 40    # quick scorecard on 40 stocks, no save
     ATRADE_OFFLINE=1 python -m atrade.forward_backtest --tickers AAPL MSFT JPM XOM
+
+--save refits on the WHOLE universe by default (the models the app ships must
+see every stock); without --save the run defaults to 120 stocks for a quick
+scorecard. Pass --limit N to override either default.
 """
 from __future__ import annotations
 
@@ -271,11 +276,15 @@ def _print_block(name, r):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tickers", nargs="*", default=None)
-    ap.add_argument("--limit", type=int, default=120, help="max stocks from the universe")
+    ap.add_argument("--limit", type=int, default=None,
+                    help="max stocks from the universe (default: all with --save, else 120 for a quick scorecard)")
     ap.add_argument("--l2", type=float, default=2.0)
     ap.add_argument("--save", action="store_true", help="refit on all history and save models for the app")
     args = ap.parse_args()
-    run(tickers=args.tickers, limit=args.limit, l2=args.l2, save=args.save)
+    # --save ships the app's models, so it must see the whole universe unless the
+    # caller narrows it explicitly; a plain scorecard run stays capped at 120.
+    limit = args.limit if args.limit is not None else (0 if args.save else 120)
+    run(tickers=args.tickers, limit=limit, l2=args.l2, save=args.save)
 
 
 if __name__ == "__main__":

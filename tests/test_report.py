@@ -19,8 +19,13 @@ S = dict(DEFAULTS)
 def res():
     from atrade.analysis import analyze
     from atrade.cleaning import clean
-    df, _, _ = clean(demo_prices(), S)
-    return analyze("DEMO", S, prices=df.iloc[:1940])   # a day on which two patterns are forming
+    # Pin the calendar to the demo's own dates so cleaning trims nothing and the
+    # result is identical whether or not pandas_market_calendars is installed and
+    # regardless of today's date (demo prices are seeded; only their dates move).
+    raw = demo_prices()
+    df, _, _ = clean(raw, S, calendar=raw.index)
+    sl = df.iloc[:2000]                                # a day with a forming pattern and failed/expired setups
+    return analyze("DEMO", S, prices=sl, calendar=sl.index)
 
 
 def test_every_pattern_has_a_description_and_an_example_the_tool_finds():

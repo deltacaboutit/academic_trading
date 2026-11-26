@@ -59,6 +59,7 @@ def test_session_day_waits_for_the_close():
     assert CC.session_day(dt.datetime(2026, 10, 21, 15, 0, tzinfo=ny)) == dt.date(2026, 10, 20)
     assert CC.session_day(dt.datetime(2026, 10, 21, 16, 30, tzinfo=ny)) == dt.date(2026, 10, 21)
     assert CC.session_day(dt.datetime(2026, 10, 24, 12, 0, tzinfo=ny)) == dt.date(2026, 10, 23)   # Saturday
+    pytest.importorskip("pandas_market_calendars")   # the holiday check needs the real NYSE calendar
     assert CC.session_day(dt.datetime(2026, 11, 26, 18, 0, tzinfo=ny)) == dt.date(2026, 11, 25)   # Thanksgiving
 
 

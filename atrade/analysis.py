@@ -65,11 +65,15 @@ def _market_bars(bar: str, years: int, index) -> pd.Series | None:
 
 
 def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=None, market=None,
-            bar: str = "day") -> dict:
+            bar: str = "day", calendar=None) -> dict:
     """bar: "day" (the books' setting), "week" (daily prices combined into weeks) or "hour"
     (hourly bars from Yahoo Finance, about two years). With weekly or hourly bars every
     setting counted in days counts bars instead, and the options-sentiment and GEX rules,
-    which use daily options data, are switched off."""
+    which use daily options data, are switched off.
+
+    calendar: an explicit trading-day index passed through to the cleaner. Leave it
+    None for normal use (the NYSE calendar). Supplying one makes cleaning independent
+    of whether pandas_market_calendars is installed — used by tests for determinism."""
     s = apply_tuned_weights(s)
 
     def step(msg):
@@ -84,7 +88,7 @@ def analyze(ticker: str, s: dict, refresh: bool = False, progress=None, prices=N
     else:
         raw, source = prices, "Supplied data"
     step("Framework 1: cleaning the data")
-    df, clean_log, quality = clean(raw, s)
+    df, clean_log, quality = clean(raw, s, calendar=calendar)
     if bar == "week":
         wk = D.to_weekly(df)
         df, _, _ = clean(wk, s, calendar=wk.index)     # weekly returns and the 3-sigma check; no gaps to fill

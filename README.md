@@ -77,9 +77,13 @@ exist; they will strengthen as more is collected. **This is a research tool, not
 **Training the models.** The app loads the saved models from `results/forward_*.json`. To rebuild them:
 
 ```
-ATRADE_OFFLINE=1 python -m atrade.forward_backtest --save          # all history, prints the scorecard, saves models
+ATRADE_OFFLINE=1 python -m atrade.forward_backtest --save          # all stocks + all history, scorecard, saves models
 ATRADE_OFFLINE=1 python -m atrade.forward_backtest --limit 40      # quick scorecard on 40 stocks, no save
 ```
+
+`--save` trains on the whole universe by default (the shipped models must see every
+stock); a plain run without `--save` samples 120 stocks for a quick scorecard. Pass
+`--limit N` to override either.
 
 The sector ETFs used for the correlation layer (XLK, XLF, XLV, …) live in `price_data/` like the other prices;
 `python -m atrade.download_prices --tickers XLK XLF XLV XLY XLP XLE XLI XLB XLRE XLU XLC` refreshes them.
